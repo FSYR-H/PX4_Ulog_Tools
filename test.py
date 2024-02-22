@@ -6,8 +6,6 @@ import matplotlib.pyplot as plt
 import mplcursors
 
 
-
-
 #使用pyulog获取日志文件，并返回所有数据主题
 def get_log(log_addr,topics=None):
     log = pyulog.ULog(log_addr)
@@ -163,21 +161,27 @@ if __name__ == "__main__":
     log,topic = get_log(log_addr,True)
 
     ATT,time_ATT = get_ATT(log)
-    pitch = ATT[1]
+    [roll,pitch,yaw] = ATT
+
     V_H , _ , time_V_H = get_velocity(log)
     ch2 , time_ch2 = get_RC_pwm(log,2)
     ch12 , time_ch12 = get_RC_pwm(log,12)
+
     data_series = [
         {'timestamps': time_ATT, 'data': pitch},
         {'timestamps': time_V_H, 'data': V_H},
         {'timestamps': time_ch12, 'data': ch12},
-       
-        # 添加更多的数据系列...
     ]
     labels = ['degree','m/s','us']
     legends = ['pitch_angle','speed','Afterburner']
-    
     title = 'angle_speed_afterburner'
     plot_everything(data_series,title,labels,legends)
 
-
+    data_series = [
+        {'timestamps': time_ATT, 'data': pitch},
+        {'timestamps': time_V_H, 'data': V_H},
+    ]
+    labels = ['degree','m/s']
+    legends = ['pitch_angle','speed']
+    title = 'angle_speed withour afterburner'
+    plot_everything(data_series,title,labels,legends)

@@ -205,5 +205,5 @@ if __name__ == "__main__":
     ]
     labels = ['degree','m/s']
     legends = ['pitch_angle','speed']
-    title = 'angle_speed withour afterburner'
+    title = 'angle_speed without afterburner'
     plot_everything(data_series,title,labels,legends)

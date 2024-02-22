@@ -4,10 +4,17 @@ import numpy as np
 import math
 import matplotlib.pyplot as plt
 import mplcursors
-
-
+import tkinter as tk
+from tkinter import filedialog
+import matplotlib.pyplot as plt
+import numpy as np
+import time
+from tkinter import filedialog, messagebox
+import sys
 #使用pyulog获取日志文件，并返回所有数据主题
 def get_log(log_addr,topics=None):
+    if 'ulg' in log_addr == False:
+        return
     log = pyulog.ULog(log_addr)
     if topics==None:
         return log
@@ -101,8 +108,6 @@ def get_RC_pwm(log,channel):
 
     return rc_input_channel,timestamps
 
-import matplotlib.pyplot as plt
-import numpy as np
 
 # 假设你的时间戳和数据是以下形式：
 
@@ -154,10 +159,27 @@ def plot_everything(data_series,titles,labels_in=None,legends_in=None):
     # 显示图形
     plt.show()
 
+def get_addr():
 
+    # 创建一个 Tkinter 对象，它是一个窗口
+    root = tk.Tk()
+    # 这行代码让窗口在打开文件对话框后就自动关闭
+    root.withdraw()
+    messagebox.showinfo("提示", "请选择一个 .ulg 文件")
+    # 打开文件对话框，并获取用户选择的文件路径
+    log_addr = filedialog.askopenfilename()
+    # 接下来，你就可以使用这个文件路径了
+    if log_addr:
+        print('get')
+    else:
+        print("Don't get plz  try again")
+        messagebox.showerror('错误!', '请选择正确文件!!')
+        sys.exit()
+        return
+    return log_addr
 
 if __name__ == "__main__":
-    log_addr = 'log_61_2024-2-6-16-27-02.ulg'
+    log_addr = get_addr()
     log,topic = get_log(log_addr,True)
 
     ATT,time_ATT = get_ATT(log)

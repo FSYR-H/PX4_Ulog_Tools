@@ -230,7 +230,7 @@ if __name__ == "__main__":
     ch12 , time_ch12 = get_RC_pwm(log,12)
     BAT,time_bat = get_Power(log)
 
-    print(len(BAT[2]),len(time_bat))
+    # print(len(BAT[2]),len(time_bat))
     ###
     title = 'angle_speed_afterburner'
     datas_list =[pitch,V_H,ch12]

@@ -247,6 +247,9 @@ if __name__ == "__main__":
     labels = ['degree','m/s']
     legends = ['pitch_angle','speed']
 
+    plotter = ulog_data_ploter(times_list, datas_list, labels, title, legends)
+    plotter.plot()
+
     ###
     title = 'flight power without Afterburner'
     labels = ['W','us']

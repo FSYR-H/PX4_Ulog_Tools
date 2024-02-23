@@ -21,8 +21,8 @@ def get_log(log_addr,topics=None):
     else:
         # 获取所有的数据主题
         topics = log.data_list
-        # for t in topics:
-        #     print(t.name)
+        for t in topics:
+            print(t.name)
         if topics:
             print('all topic get')
             return log,topics
@@ -70,16 +70,7 @@ def get_ATT(log):
     print(len(q_w))
     return [roll,pitch,yaw],timestamps
 
-def get_Power(log):
-    vehicle_power = log.get_dataset('battery_status')
-    timestamps = vehicle_power.data['timestamp']
-    Vot = np.array(vehicle_power.data['voltage_v'])
-    Cur = np.array(vehicle_power.data['current_a'])
 
-    P = Vot * Cur
-    BAT = [Vot,Cur,P]
-
-    return BAT,timestamps
 
 def get_velocity(log):
     # 获取 vehicle_local_position 主题
@@ -106,8 +97,6 @@ def get_RC_pwm(log,channel):
 
     return rc_input_channel,timestamps
 
-
-# 假设你的时间戳和数据是以下形式：
 
 def plot_everything(data_series,titles,labels_in=None,legends_in=None):
     if labels_in != None:
@@ -158,7 +147,6 @@ def plot_everything(data_series,titles,labels_in=None,legends_in=None):
     plt.show()
 
 def get_addr():
-
     # 创建一个 Tkinter 对象，它是一个窗口
     root = tk.Tk()
     # 这行代码让窗口在打开文件对话框后就自动关闭
@@ -216,12 +204,22 @@ class ulog_data_ploter:
         data_series = [{'timestamps': t, 'data': d} for t, d in zip(self.times_list, self.datas_list)]
         plot_everything(data_series,self.title,self.labels,self.legends)
 
+def get_Power(log):
+    vehicle_power = log.get_dataset('battery_status')
+    timestamps = vehicle_power.data['timestamp']
+    Vot = np.array(vehicle_power.data['voltage_v'])
+    Cur = np.array(vehicle_power.data['current_a'])
+
+    P = Vot * Cur
+    BAT = [Vot,Cur,P]
+
+    return BAT,timestamps
 
 
 
 if __name__ == "__main__":
     # log_addr = get_addr()
-    log_addr = 'PX4_Ulog_Tools\log_61_2024-2-6-16-27-02.ulg'
+    # log_addr = 'PX4_Ulog_Tools\log_61_2024-2-6-16-27-02.ulg'
     log,topic = get_log(log_addr,True)
 
     ATT,time_ATT = get_ATT(log)
@@ -229,8 +227,8 @@ if __name__ == "__main__":
     V_H , _ , time_V_H = get_velocity(log)
     ch2 , time_ch2 = get_RC_pwm(log,2)
     ch12 , time_ch12 = get_RC_pwm(log,12)
+    BAT,time_bat = get_Power(log)
     
-
 
 
 
@@ -244,11 +242,27 @@ if __name__ == "__main__":
     plotter = ulog_data_ploter(times_list, datas_list, labels, title, legends)
     plotter.plot()
     
-    labels = ['degree','m/s']
-    legends = ['pitch_angle','speed']
-    title = 'angle_speed without afterburner'
-    times_list = [time_ATT,time_V_H]
-    datas_list = [pitch,V_H]
+    labels = ['W','us']
+    legends = ['flight power','Afterburner']
+    title = 'flight power without Afterburner'
+    times_list = [time_ATT,time_ch12]
+    datas_list = [BAT[2],ch12]
+
+    labels = ['W','us']
+    legends = ['flight power,time_ch12']
+    title = 'flight power without Afterburner'
+    times_list = [time_bat,time_ch12]
+    datas_list = [BAT[2],ch12]
     
+    plotter = ulog_data_ploter(times_list, datas_list, labels, title, legends)
+    plotter.plot()
+
+
+    labels = ['degree','m/s','us']
+    legends = ['pitch_angle','speed','Afterburner']
+    title = 'angle_speed_afterburner'
+    datas_list =[pitch,V_H,ch12]
+    times_list = [time_ATT,time_V_H,time_ch12]
+
     plotter = ulog_data_ploter(times_list, datas_list, labels, title, legends)
     plotter.plot()

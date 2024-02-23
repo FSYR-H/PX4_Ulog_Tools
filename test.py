@@ -50,6 +50,7 @@ def plot_ATT(ATT):
     plt.tight_layout()
     plt.show()
 
+
 def get_ATT(log):
     roll = []
     pitch =[]
@@ -69,7 +70,16 @@ def get_ATT(log):
     print(len(q_w))
     return [roll,pitch,yaw],timestamps
 
+def get_Power(log):
+    vehicle_power = log.get_dataset('battery_status')
+    timestamps = vehicle_power.data['timestamp']
+    Vot = np.array(vehicle_power.data['voltage_v'])
+    Cur = np.array(vehicle_power.data['current_a'])
 
+    P = Vot * Cur
+    BAT = [Vot,Cur,P]
+
+    return BAT,timestamps
 
 def get_velocity(log):
     # 获取 vehicle_local_position 主题
@@ -82,18 +92,6 @@ def get_velocity(log):
     # 计算水平和垂直速度
     v_Hor = np.sqrt(vx**2 + vy**2)
     # v_Ver = ... # 如果需要计算垂直速度，可以在这里添加计算
-    plt.figure()
-
-    # 画出数据，使用timestamps作为x轴
-    plt.plot(timestamps, v_Hor)
-
-    # 设置标题和标签
-    plt.title('Speed_m/s')
-    plt.xlabel('Time')
-    plt.ylabel('v_Hor')
-
-    # 显示图像
-    plt.show()
     return v_Hor, vz, timestamps
 
 def get_RC_pwm(log,channel):
@@ -178,32 +176,79 @@ def get_addr():
         return
     return log_addr
 
+def plot_everything_pro(timestamps_list,datas_list,labels,title,legends):
+    if len(timestamps_list) != len(datas_list):
+        print('应该提供长度相等的两组数据')
+        return
+    else:
+        for t,d in zip(timestamps_list,datas_list):
+            if len(t) != len(d):
+                print('这组数据长度不相等，请重新提供')
+                print(d)
+                return
+    data_series = [{'timestamps': t, 'data': d} for t, d in zip(timestamps_list, datas_list)]
+    plot_everything(data_series,title,labels,legends)
+
+
+class ulog_data_ploter:
+    def __init__(self, times_list, datas_list, labels, title, legends):
+        self.times_list = times_list
+        self.datas_list = datas_list
+        self.labels = labels
+        self.title = title
+        self.legends = legends
+
+    def check_data(self):
+        if len(self.times_list) != len(self.datas_list):
+            print('应该提供长度相等的两组数据')
+            return False
+        else:
+            for t, d in zip(self.times_list, self.datas_list):
+                if len(t) != len(d):
+                    print('这组数据长度不相等，请重新提供')
+                    print(d)
+                    return False
+        return True
+    
+    def plot(self):
+        if not self.check_data():
+            return
+        data_series = [{'timestamps': t, 'data': d} for t, d in zip(self.times_list, self.datas_list)]
+        plot_everything(data_series,self.title,self.labels,self.legends)
+
+
+
+
 if __name__ == "__main__":
-    log_addr = get_addr()
+    # log_addr = get_addr()
+    log_addr = 'PX4_Ulog_Tools\log_61_2024-2-6-16-27-02.ulg'
     log,topic = get_log(log_addr,True)
 
     ATT,time_ATT = get_ATT(log)
     [roll,pitch,yaw] = ATT
-
     V_H , _ , time_V_H = get_velocity(log)
     ch2 , time_ch2 = get_RC_pwm(log,2)
     ch12 , time_ch12 = get_RC_pwm(log,12)
+    
 
-    data_series = [
-        {'timestamps': time_ATT, 'data': pitch},
-        {'timestamps': time_V_H, 'data': V_H},
-        {'timestamps': time_ch12, 'data': ch12},
-    ]
+
+
+
+
+    datas_list =[pitch,V_H,ch12]
+    times_list = [time_ATT,time_V_H,time_ch12]
     labels = ['degree','m/s','us']
     legends = ['pitch_angle','speed','Afterburner']
     title = 'angle_speed_afterburner'
-    plot_everything(data_series,title,labels,legends)
 
-    data_series = [
-        {'timestamps': time_ATT, 'data': pitch},
-        {'timestamps': time_V_H, 'data': V_H},
-    ]
+    plotter = ulog_data_ploter(times_list, datas_list, labels, title, legends)
+    plotter.plot()
+    
     labels = ['degree','m/s']
     legends = ['pitch_angle','speed']
     title = 'angle_speed without afterburner'
-    plot_everything(data_series,title,labels,legends)
+    times_list = [time_ATT,time_V_H]
+    datas_list = [pitch,V_H]
+    
+    plotter = ulog_data_ploter(times_list, datas_list, labels, title, legends)
+    plotter.plot()

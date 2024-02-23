@@ -193,6 +193,7 @@ class ulog_data_ploter:
         else:
             for t, d in zip(self.times_list, self.datas_list):
                 if len(t) != len(d):
+                    print(len(t),len(d))
                     print('这组数据长度不相等，请重新提供')
                     print(d)
                     return False
@@ -229,6 +230,7 @@ if __name__ == "__main__":
     ch12 , time_ch12 = get_RC_pwm(log,12)
     BAT,time_bat = get_Power(log)
 
+    print(len(BAT[2]),len(time_bat))
     ###
     title = 'angle_speed_afterburner'
     datas_list =[pitch,V_H,ch12]
@@ -250,20 +252,11 @@ if __name__ == "__main__":
     plotter = ulog_data_ploter(times_list, datas_list, labels, title, legends)
     plotter.plot()
 
-    ###
-    title = 'flight power without Afterburner'
-    labels = ['W','us']
-    legends = ['flight power','Afterburner']
-    times_list = [time_ATT,time_ch12]
-    datas_list = [BAT[2],ch12]
-    
-    plotter = ulog_data_ploter(times_list, datas_list, labels, title, legends)
-    plotter.plot()
 
     ###
-    title = 'flight power without Afterburner'
+    title = 'flight power with or without Afterburner'
     labels = ['W','us']
-    legends = ['flight power,time_ch12']
+    legends = ['flight power','time_ch12']
     times_list = [time_bat,time_ch12]
     datas_list = [BAT[2],ch12]
     

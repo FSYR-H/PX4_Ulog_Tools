@@ -2,7 +2,7 @@
 
 
 a = Analysis(
-    ['test.py'],
+    ['D:\\丰翼科技\\脚本\\git_px4\\PX4_Ulog_Tools\\ulog.py'],
     pathex=[],
     binaries=[],
     datas=[],
@@ -34,5 +34,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=['123123.ico'],
+    icon=['D:\\丰翼科技\\脚本\\git_px4\\PX4_Ulog_Tools\\123123.ico'],
 )

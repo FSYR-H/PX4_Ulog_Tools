@@ -220,7 +220,7 @@ def get_Power(log):
 
 if __name__ == "__main__":
     log_addr = get_addr()
-    # log_addr = 'PX4_Ulog_Tools\log_61_2024-2-6-16-27-02.ulg'
+    # log_addr = 'D:\\丰翼科技\\脚本\\git_px4\\PX4_Ulog_Tools\\log_61_2024-2-6-16-27-02.ulg'
     log,topic = get_log(log_addr,True)
 
     ATT,time_ATT = get_ATT(log)

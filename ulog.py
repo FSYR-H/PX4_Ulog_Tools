@@ -223,9 +223,8 @@ def count_power_onsumption(log,pre_fly_power=None):
     Vot = np.array(vehicle_power.data['voltage_v'])
     Cur = np.array(vehicle_power.data['current_a'])
     
-
     if pre_fly_power == None:
-        pre_fly_power = 50
+        pre_fly_power = 5
     else:
         pre_fly_power = int(pre_fly_power)
     P = Vot * Cur

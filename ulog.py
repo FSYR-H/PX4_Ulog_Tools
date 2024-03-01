@@ -236,9 +236,6 @@ def count_power_onsumption(log,pre_fly_power=None):
             sum = sum + p
     P_avg = round(sum / len(P),2)
 
-
-
-
     for i in range(len(P)):
         if P[i] > pre_fly_power:
             time_start = timestamps[i]
@@ -249,18 +246,16 @@ def count_power_onsumption(log,pre_fly_power=None):
             break
 
     time_skip = round((time_end - time_start)/1000000 , 5)
-
     P_count = round(P_avg * time_skip / 1000, 2) 
 
     # print('平均速度为: ' + str(V_avg) + 'W')
     print('平均功率为: ' + str(P_avg) + 'W')
-    print('功耗为：' + str(P_count) + '10kJ')
-
-
-
-  
-
-
+    print('功耗为：' + str(P_count) + 'kJ')
+    # 创建一个 Tkinter 对象，它是一个窗口
+    root = tk.Tk()
+    # 这行代码让窗口在打开文件对话框后就自动关闭
+    root.withdraw()
+    messagebox.showinfo("提示", f"起飞后的功率、功耗是：{P_avg} W, {P_count} kJ")
 
 
 
@@ -287,36 +282,36 @@ if __name__ == "__main__":
     ch12 , time_ch12 = get_RC_pwm(log,12)
     BAT,time_bat = get_Power(log)
 
-    # # print(len(BAT[2]),len(time_bat))
-    # ###
-    # title = 'angle_speed_afterburner'
-    # datas_list =[pitch,V_H,ch12]
-    # times_list = [time_ATT,time_V_H,time_ch12]
-    # labels = ['degree','m/s']
-    # legends = ['pitch_angle','speed','Afterburner']
+    # print(len(BAT[2]),len(time_bat))
+    ###
+    title = 'angle_speed_afterburner'
+    datas_list =[pitch,V_H,ch12]
+    times_list = [time_ATT,time_V_H,time_ch12]
+    labels = ['degree','m/s']
+    legends = ['pitch_angle','speed','Afterburner']
     
 
-    # plotter = ulog_data_ploter(times_list, datas_list, labels, title, legends)
-    # plotter.plot()
+    plotter = ulog_data_ploter(times_list, datas_list, labels, title, legends)
+    plotter.plot()
     
-    # ###
-    # title = 'angle_speed_without_afterburner'
-    # datas_list =[pitch,V_H,ch2]
-    # times_list = [time_ATT,time_V_H,time_ch2]
-    # labels = ['degree','m/s','us']
-    # legends = ['pitch_angle','speed','ch2']
+    ###
+    title = 'angle_speed_without_afterburner'
+    datas_list =[pitch,V_H,ch2]
+    times_list = [time_ATT,time_V_H,time_ch2]
+    labels = ['degree','m/s','us']
+    legends = ['pitch_angle','speed','ch2']
 
-    # plotter = ulog_data_ploter(times_list, datas_list, labels, title, legends)
-    # plotter.plot()
+    plotter = ulog_data_ploter(times_list, datas_list, labels, title, legends)
+    plotter.plot()
 
 
-    # ###
-    # title = 'flight power with or without Afterburner & speed'
-    # labels = ['W','us','m/s']
-    # legends = ['flight power','ch12','speed']
-    # times_list = [time_bat,time_ch12,time_V_H]
-    # datas_list = [BAT[2],ch12,V_H]
+    ###
+    title = 'flight power with or without Afterburner & speed'
+    labels = ['W','us','m/s']
+    legends = ['flight power','ch12','speed']
+    times_list = [time_bat,time_ch12,time_V_H]
+    datas_list = [BAT[2],ch12,V_H]
     
-    # plotter = ulog_data_ploter(times_list, datas_list, labels, title, legends)
-    # plotter.plot()
+    plotter = ulog_data_ploter(times_list, datas_list, labels, title, legends)
+    plotter.plot()
 

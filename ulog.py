@@ -210,56 +210,113 @@ def get_Power(log):
     timestamps = vehicle_power.data['timestamp']
     Vot = np.array(vehicle_power.data['voltage_v'])
     Cur = np.array(vehicle_power.data['current_a'])
-
+    
     P = Vot * Cur
     BAT = [Vot,Cur,P]
-
+    # print('......')
+    # print(timestamps)
     return BAT,timestamps
+
+def count_power_onsumption(log,pre_fly_power=None):
+    vehicle_power = log.get_dataset('battery_status')
+    timestamps = vehicle_power.data['timestamp']
+    Vot = np.array(vehicle_power.data['voltage_v'])
+    Cur = np.array(vehicle_power.data['current_a'])
+    
+
+    if pre_fly_power == None:
+        pre_fly_power = 50
+    else:
+        pre_fly_power = int(pre_fly_power)
+    P = Vot * Cur
+    # 计算平均功率
+    sum = 0 
+    for p in P:
+        if p > pre_fly_power:
+            sum = sum + p
+    P_avg = round(sum / len(P),2)
+
+
+
+
+    for i in range(len(P)):
+        if P[i] > pre_fly_power:
+            time_start = timestamps[i]
+            break
+    for i in range(len(P)-1,1,-1):
+        if P[i] > pre_fly_power:
+            time_end = timestamps[i]
+            break
+
+    time_skip = round((time_end - time_start)/1000000 , 5)
+
+    P_count = round(P_avg * time_skip / 1000, 2) 
+
+    # print('平均速度为: ' + str(V_avg) + 'W')
+    print('平均功率为: ' + str(P_avg) + 'W')
+    print('功耗为：' + str(P_count) + '10kJ')
+
+
+
+  
+
+
 
 
 
 if __name__ == "__main__":
     log_addr = get_addr()
-    # log_addr = 'D:\\丰翼科技\\脚本\\git_px4\\PX4_Ulog_Tools\\log_61_2024-2-6-16-27-02.ulg'
+    # log_addr = 'D:\\丰翼科技\\脚本\\git_px4\\PX4_Ulog_Tools\\log_123_2024-3-1-14-47-02.ulg'
     log,topic = get_log(log_addr,True)
 
     ATT,time_ATT = get_ATT(log)
+
+
+    count_power_onsumption(log,100)
+
+
+
     [roll,pitch,yaw] = ATT
     V_H , _ , time_V_H = get_velocity(log)
+
+    ch1 , time_ch1 = get_RC_pwm(log,1)
     ch2 , time_ch2 = get_RC_pwm(log,2)
+    ch3 , time_ch3 = get_RC_pwm(log,3)
+    ch4 , time_ch4 = get_RC_pwm(log,4)
+
     ch12 , time_ch12 = get_RC_pwm(log,12)
     BAT,time_bat = get_Power(log)
 
-    # print(len(BAT[2]),len(time_bat))
-    ###
-    title = 'angle_speed_afterburner'
-    datas_list =[pitch,V_H,ch12]
-    times_list = [time_ATT,time_V_H,time_ch12]
-    labels = ['degree','m/s','us']
-    legends = ['pitch_angle','speed','Afterburner']
+    # # print(len(BAT[2]),len(time_bat))
+    # ###
+    # title = 'angle_speed_afterburner'
+    # datas_list =[pitch,V_H,ch12]
+    # times_list = [time_ATT,time_V_H,time_ch12]
+    # labels = ['degree','m/s']
+    # legends = ['pitch_angle','speed','Afterburner']
     
 
-    plotter = ulog_data_ploter(times_list, datas_list, labels, title, legends)
-    plotter.plot()
+    # plotter = ulog_data_ploter(times_list, datas_list, labels, title, legends)
+    # plotter.plot()
     
-    ###
-    title = 'angle_speed_without_afterburner'
-    datas_list =[pitch,V_H]
-    times_list = [time_ATT,time_V_H]
-    labels = ['degree','m/s']
-    legends = ['pitch_angle','speed']
+    # ###
+    # title = 'angle_speed_without_afterburner'
+    # datas_list =[pitch,V_H,ch2]
+    # times_list = [time_ATT,time_V_H,time_ch2]
+    # labels = ['degree','m/s','us']
+    # legends = ['pitch_angle','speed','ch2']
 
-    plotter = ulog_data_ploter(times_list, datas_list, labels, title, legends)
-    plotter.plot()
+    # plotter = ulog_data_ploter(times_list, datas_list, labels, title, legends)
+    # plotter.plot()
 
 
-    ###
-    title = 'flight power with or without Afterburner'
-    labels = ['W','us']
-    legends = ['flight power','time_ch12']
-    times_list = [time_bat,time_ch12]
-    datas_list = [BAT[2],ch12]
+    # ###
+    # title = 'flight power with or without Afterburner & speed'
+    # labels = ['W','us','m/s']
+    # legends = ['flight power','ch12','speed']
+    # times_list = [time_bat,time_ch12,time_V_H]
+    # datas_list = [BAT[2],ch12,V_H]
     
-    plotter = ulog_data_ploter(times_list, datas_list, labels, title, legends)
-    plotter.plot()
+    # plotter = ulog_data_ploter(times_list, datas_list, labels, title, legends)
+    # plotter.plot()
 

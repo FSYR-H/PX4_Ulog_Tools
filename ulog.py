@@ -17,6 +17,7 @@ def get_log(log_addr,topics=None):
         return
     log = pyulog.ULog(log_addr)
     if topics==None:
+        print('No Topic')
         return log
     else:
         # 获取所有的数据主题
@@ -243,18 +244,19 @@ def count_power_onsumption(log,pre_fly_power=None):
         if P[i] > pre_fly_power:
             time_end = timestamps[i]
             break
-
+    max_power = max(P)
     time_skip = round((time_end - time_start)/1000000 , 5)
     P_count = round(P_avg * time_skip / 1000, 2) 
 
     # print('平均速度为: ' + str(V_avg) + 'W')
     print('平均功率为: ' + str(P_avg) + 'W')
+    # print(f'最大功率为: {max_power}')
     print('功耗为：' + str(P_count) + 'kJ')
     # 创建一个 Tkinter 对象，它是一个窗口
     root = tk.Tk()
     # 这行代码让窗口在打开文件对话框后就自动关闭
     root.withdraw()
-    messagebox.showinfo("提示", f"起飞后的功率、功耗是：{P_avg} W, {P_count} kJ")
+    messagebox.showinfo("提示", f"起飞后的平均功率、功耗是：{P_avg} W,{P_count} kJ")
 
 
 
@@ -284,10 +286,10 @@ if __name__ == "__main__":
     # print(len(BAT[2]),len(time_bat))
     ###
     title = 'angle_speed_afterburner'
-    datas_list =[pitch,V_H,ch12]
-    times_list = [time_ATT,time_V_H,time_ch12]
-    labels = ['degree','m/s']
-    legends = ['pitch_angle','speed','Afterburner']
+    datas_list =[pitch,V_H,ch12,ch2]
+    times_list = [time_ATT,time_V_H,time_ch12,time_ch2]
+    labels = ['degree','m/s','us','us']
+    legends = ['pitch_angle','speed','Afterburner','pitch_rc']
     
 
     plotter = ulog_data_ploter(times_list, datas_list, labels, title, legends)

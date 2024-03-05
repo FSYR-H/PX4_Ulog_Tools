@@ -129,7 +129,7 @@ def plot_everything(data_series,titles,labels_in=None,legends_in=None):
         else:
             # 对于其他的数据系列，我们创建一个新的Y轴并绘制
             ax = host.twinx()
-            ax.spines['right'].set_position(('axes', 1 + i*0.1))  # 将Y轴向右移动
+            ax.spines['right'].set_position(('axes', 1 + i*0.05))  # 将Y轴向右移动
             ax.spines['right'].set_color(colors[i % len(colors)])  # 设置 Y 轴颜色与线的颜色一样
             p, = ax.plot(series['timestamps'], series['data'], color=colors[i % len(colors)])
             if labels and i < len(labels):  # 如果标签列表不为空且i没有超过标签的数量
@@ -245,7 +245,7 @@ def count_power_onsumption(log,pre_fly_power=None):
             time_end = timestamps[i]
             break
     max_power = max(P)
-    time_skip = round((time_end - time_start)/1000000 , 5)
+    time_skip = round((time_end - time_start)/1000000 , 10)
     P_count = round(P_avg * time_skip / 1000, 2) 
 
     # print('平均速度为: ' + str(V_avg) + 'W')
@@ -258,16 +258,29 @@ def count_power_onsumption(log,pre_fly_power=None):
     root.withdraw()
     messagebox.showinfo("提示", f"起飞后的平均功率、功耗是：{P_avg} W,{P_count} kJ")
 
-
-
+def get_alt(log):
+    if log == None:
+        return
+    vehicle_att = log.get_dataset('vehicle_gps_position')
+    timestamps = vehicle_att.data['timestamp']
+    alt = np.array(vehicle_att.data['alt'])
+    # Cur = np.array(vehicle_power.data['current_a'])
+    return alt,timestamps
+def get_curr(log):
+    if log == None:
+        return
+    vehicle_power = log.get_dataset('battery_status')
+    timestamps = vehicle_power.data['timestamp']
+    Cur = np.array(vehicle_power.data['current_a'])
+    return Cur,timestamps
 if __name__ == "__main__":
     log_addr = get_addr()
-    # log_addr = 'D:\\丰翼科技\\脚本\\git_px4\\PX4_Ulog_Tools\\log_123_2024-3-1-14-47-02.ulg'
     log,topic = get_log(log_addr,True)
 
+    alt,alt_t = get_alt(log)
     ATT,time_ATT = get_ATT(log)
 
-
+    Cur,Cur_t = get_curr(log)
     count_power_onsumption(log,100)
 
 
@@ -285,11 +298,11 @@ if __name__ == "__main__":
 
     # print(len(BAT[2]),len(time_bat))
     ###
-    title = 'angle_speed_afterburner'
-    datas_list =[pitch,V_H,ch12,ch2]
-    times_list = [time_ATT,time_V_H,time_ch12,time_ch2]
-    labels = ['degree','m/s','us','us']
-    legends = ['pitch_angle','speed','Afterburner','pitch_rc']
+    title = 'angle_speed_afterburner_curr_alt'
+    datas_list =[pitch,V_H,ch12,ch2,Cur,alt]
+    times_list = [time_ATT,time_V_H,time_ch12,time_ch2,Cur_t,alt_t]
+    labels = ['degree','m/s','us','us','A','unknow']
+    legends = ['pitch_angle','speed','Afterburner','pitch_rc','curr','alt']
     
 
     plotter = ulog_data_ploter(times_list, datas_list, labels, title, legends)

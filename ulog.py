@@ -12,23 +12,35 @@ import time
 from tkinter import filedialog, messagebox
 import sys
 #使用pyulog获取日志文件，并返回所有数据主题
-def get_log(log_addr,topics=None):
-    if 'ulg' in log_addr == False:
+def get_log(log_addr, topics=None):
+    if 'ulg' not in log_addr:
         return
+    
     log = pyulog.ULog(log_addr)
-    if topics==None:
+    
+    if topics is None:
         print('No Topic')
         return log
     else:
         # 获取所有的数据主题
         topics = log.data_list
-        for t in topics:
-            print(t.name)
+        # renamed = False  # 初始化为False
+        count = 0
+        for topic in topics:
+            print(topic.name)
+            # if topic.name == 'actuator_outputs':  # 仅重命名第二次出现的'actuator_outputs'
+            #     count = count + 1
+            #     if count == 2:
+            #         topic.name = 'actuator_outputs1'
+            #         print(count)
+            #         print('Found actuator_outputs with multi_id:', topic.multi_id)
+            
         if topics:
             print('all topic get')
-            return log,topics
+            return log, topics
         else:
             print('no topic')
+
 
 def Quat2Angle(q_x, q_y, q_z, q_w):
     q = np.array([q_x, q_y, q_z, q_w])
@@ -165,18 +177,18 @@ def get_addr():
         return
     return log_addr
 
-def plot_everything_pro(timestamps_list,datas_list,labels,title,legends):
-    if len(timestamps_list) != len(datas_list):
-        print('应该提供长度相等的两组数据')
-        return
-    else:
-        for t,d in zip(timestamps_list,datas_list):
-            if len(t) != len(d):
-                print('这组数据长度不相等，请重新提供')
-                print(d)
-                return
-    data_series = [{'timestamps': t, 'data': d} for t, d in zip(timestamps_list, datas_list)]
-    plot_everything(data_series,title,labels,legends)
+# def plot_everything_pro(timestamps_list,datas_list,labels,title,legends):
+#     if len(timestamps_list) != len(datas_list):
+#         print('应该提供长度相等的两组数据')
+#         return
+#     else:
+#         for t,d in zip(timestamps_list,datas_list):
+#             if len(t) != len(d):
+#                 print('这组数据长度不相等，请重新提供')
+#                 print(d)
+#                 return
+#     data_series = [{'timestamps': t, 'data': d} for t, d in zip(timestamps_list, datas_list)]
+#     plot_everything(data_series,title,labels,legends)
 
 
 class ulog_data_ploter:
@@ -244,14 +256,18 @@ def count_power_onsumption(log,pre_fly_power=None):
         if P[i] > pre_fly_power:
             time_end = timestamps[i]
             break
+            
     max_power = max(P)
-    time_skip = round((time_end - time_start)/1000000 , 10)
+    time_skip = round((time_end - time_start)/1000000 , 2)
     P_count = round(P_avg * time_skip / 1000, 2) 
+
 
     # print('平均速度为: ' + str(V_avg) + 'W')
     print('平均功率为: ' + str(P_avg) + 'W')
     # print(f'最大功率为: {max_power}')
     print('功耗为：' + str(P_count) + 'kJ')
+
+    print('飞行时间为: ' +str(time_skip)+'s')
     # 创建一个 Tkinter 对象，它是一个窗口
     root = tk.Tk()
     # 这行代码让窗口在打开文件对话框后就自动关闭
@@ -264,7 +280,6 @@ def get_alt(log):
     vehicle_att = log.get_dataset('vehicle_gps_position')
     timestamps = vehicle_att.data['timestamp']
     alt = np.array(vehicle_att.data['alt'])
-    # Cur = np.array(vehicle_power.data['current_a'])
     return alt,timestamps
 def get_curr(log):
     if log == None:
@@ -272,60 +287,66 @@ def get_curr(log):
     vehicle_power = log.get_dataset('battery_status')
     timestamps = vehicle_power.data['timestamp']
     Cur = np.array(vehicle_power.data['current_a'])
-    return Cur,timestamps
+    print(vehicle_power)
+    return Cur,timestamps 
+
+def get_afterburad(log):
+    vehicle_mot2 = log.get_dataset('actuator_outputs',instance=1)
+    print(vehicle_mot2)
+    timestamps = vehicle_mot2.data['timestamp']
+    pwm = np.array(vehicle_mot2.data['output[1]'])
+    print(pwm)
+
+    return pwm, timestamps
+
+
 if __name__ == "__main__":
     log_addr = get_addr()
     log,topic = get_log(log_addr,True)
 
-    alt,alt_t = get_alt(log)
     ATT,time_ATT = get_ATT(log)
 
     Cur,Cur_t = get_curr(log)
     count_power_onsumption(log,100)
 
-
+    after_bured,time_after = get_afterburad(log)
 
     [roll,pitch,yaw] = ATT
     V_H , _ , time_V_H = get_velocity(log)
 
-    ch1 , time_ch1 = get_RC_pwm(log,1)
-    ch2 , time_ch2 = get_RC_pwm(log,2)
-    ch3 , time_ch3 = get_RC_pwm(log,3)
-    ch4 , time_ch4 = get_RC_pwm(log,4)
+    # ch1 , time_ch1 = get_RC_pwm(log,1)
 
-    ch12 , time_ch12 = get_RC_pwm(log,12)
     BAT,time_bat = get_Power(log)
 
-    # print(len(BAT[2]),len(time_bat))
-    ###
-    title = 'angle_speed_afterburner_curr_alt'
-    datas_list =[pitch,V_H,ch12,ch2,Cur,alt]
-    times_list = [time_ATT,time_V_H,time_ch12,time_ch2,Cur_t,alt_t]
-    labels = ['degree','m/s','us','us','A','unknow']
-    legends = ['pitch_angle','speed','Afterburner','pitch_rc','curr','alt']
-    
+
+
+    title = 'angle_speed_afterbupitch_V_rner_curr_alt'
+    datas_list =[pitch,V_H,after_bured,Cur]
+    times_list = [time_ATT,time_V_H,time_after,Cur_t]
+    labels = ['degree','m/s','us','A','unknow']
+    legends = ['pitch_angle','speed','Afterburner','curr']   
 
     plotter = ulog_data_ploter(times_list, datas_list, labels, title, legends)
     plotter.plot()
     
     ###
-    title = 'angle_speed_without_afterburner'
-    datas_list =[pitch,V_H,ch2]
-    times_list = [time_ATT,time_V_H,time_ch2]
+    title = 'pitch_V_Afterburner'
+    datas_list =[pitch,V_H,after_bured]
+    times_list = [time_ATT,time_V_H,time_after]
     labels = ['degree','m/s','us']
-    legends = ['pitch_angle','speed','ch2']
+    legends = ['pitch_angle','speed','AB']
 
     plotter = ulog_data_ploter(times_list, datas_list, labels, title, legends)
     plotter.plot()
 
 
-    ###
-    title = 'flight power with or without Afterburner & speed'
-    labels = ['W','us','m/s']
-    legends = ['flight power','ch12','speed']
-    times_list = [time_bat,time_ch12,time_V_H]
-    datas_list = [BAT[2],ch12,V_H]
+    # ###
+    # title = 'flight power with or without Afterburner & speed'
+    # labels = ['W','us','m/s']
+    # legends = ['flight power','ch12','speed']
+    # times_list = [time_bat,time_ch12,time_V_H]
+    # datas_list = [BAT[2],ch12,V_H]
     
-    plotter = ulog_data_ploter(times_list, datas_list, labels, title, legends)
-    plotter.plot()
+    # plotter = ulog_data_ploter(times_list, datas_list, labels, title, legends)
+    # plotter.plot()
 

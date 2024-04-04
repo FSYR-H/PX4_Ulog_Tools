@@ -28,13 +28,6 @@ def get_log(log_addr, topics=None):
         count = 0
         for topic in topics:
             print(topic.name)
-            # if topic.name == 'actuator_outputs':  # 仅重命名第二次出现的'actuator_outputs'
-            #     count = count + 1
-            #     if count == 2:
-            #         topic.name = 'actuator_outputs1'
-            #         print(count)
-            #         print('Found actuator_outputs with multi_id:', topic.multi_id)
-            
         if topics:
             print('all topic get')
             return log, topics
@@ -177,18 +170,26 @@ def get_addr():
         return
     return log_addr
 
-# def plot_everything_pro(timestamps_list,datas_list,labels,title,legends):
-#     if len(timestamps_list) != len(datas_list):
-#         print('应该提供长度相等的两组数据')
-#         return
-#     else:
-#         for t,d in zip(timestamps_list,datas_list):
-#             if len(t) != len(d):
-#                 print('这组数据长度不相等，请重新提供')
-#                 print(d)
-#                 return
-#     data_series = [{'timestamps': t, 'data': d} for t, d in zip(timestamps_list, datas_list)]
-#     plot_everything(data_series,title,labels,legends)
+def get_log(log_addr, topics=None):
+    if 'ulg' not in log_addr:
+        return
+    log = pyulog.ULog(log_addr)
+    
+    if topics is None:
+        print('No Topic')
+        return log
+    else:
+        # 获取所有的数据主题
+        topics = log.data_list
+        # renamed = False  # 初始化为False
+        count = 0
+        for topic in topics:
+            print(topic.name)
+        if topics:
+            print('all topic get')
+            return log, topics
+        else:
+            print('no topic')
 
 
 class ulog_data_ploter:
@@ -290,11 +291,20 @@ def get_curr(log):
     print(vehicle_power)
     return Cur,timestamps 
 
-def get_afterburad(log):
+def get_afterburad_ORANG(log):
     vehicle_mot2 = log.get_dataset('actuator_outputs',instance=1)
     print(vehicle_mot2)
     timestamps = vehicle_mot2.data['timestamp']
     pwm = np.array(vehicle_mot2.data['output[1]'])
+    print(pwm)
+
+    return pwm, timestamps
+
+def get_afterburad_CUAV(log):
+    vehicle_mot2 = log.get_dataset('actuator_outputs')
+    print(vehicle_mot2)
+    timestamps = vehicle_mot2.data['timestamp']
+    pwm = np.array(vehicle_mot2.data['output[8]'])
     print(pwm)
 
     return pwm, timestamps
@@ -309,7 +319,7 @@ if __name__ == "__main__":
     Cur,Cur_t = get_curr(log)
     count_power_onsumption(log,100)
 
-    after_bured,time_after = get_afterburad(log)
+    after_bured,time_after = get_afterburad_CUAV(log)
 
     [roll,pitch,yaw] = ATT
     V_H , _ , time_V_H = get_velocity(log)
@@ -320,14 +330,14 @@ if __name__ == "__main__":
 
 
 
-    title = 'angle_speed_afterbupitch_V_rner_curr_alt'
-    datas_list =[pitch,V_H,after_bured,Cur]
-    times_list = [time_ATT,time_V_H,time_after,Cur_t]
-    labels = ['degree','m/s','us','A','unknow']
-    legends = ['pitch_angle','speed','Afterburner','curr']   
+    # title = 'angle_speed_afterbupitch_V_rner_curr_alt'
+    # datas_list =[pitch,V_H,Cur,after_bured]
+    # times_list = [time_ATT,time_V_H,Cur_t,time_after]
+    # labels = ['degree','m/s','A','unknow','us']
+    # legends = ['pitch_angle','speed','curr','AB']   
 
-    plotter = ulog_data_ploter(times_list, datas_list, labels, title, legends)
-    plotter.plot()
+    # plotter = ulog_data_ploter(times_list, datas_list, labels, title, legends)
+    # plotter.plot()
     
     ###
     title = 'pitch_V_Afterburner'

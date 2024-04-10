@@ -26,8 +26,8 @@ def xFunc(event,combobox):
     print(combobox.get())            # #获取选中的值方法1
 
 
-
-
+def callback(a):
+    print('你好',a)
 
 if __name__ == '__main__':
 
@@ -40,6 +40,9 @@ if __name__ == '__main__':
     com2, label2 = creat_combobox()
     com2.bind("<<ComboboxSelected>>", lambda event: xFunc(event, com2))
     com3, label3 = creat_combobox()
+    
 
+    but1=Button(root,text='退出',command=lambda : callback('张三')) 
+    but1.pack(side=TOP, anchor=NW)
 
     mainloop()

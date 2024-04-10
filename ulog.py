@@ -282,6 +282,7 @@ def get_alt(log):
     timestamps = vehicle_att.data['timestamp']
     alt = np.array(vehicle_att.data['alt'])
     return alt,timestamps
+
 def get_curr(log):
     if log == None:
         return
@@ -301,20 +302,63 @@ def get_afterburad_ORANG(log):
     return pwm, timestamps
 
 def get_afterburad_CUAV(log):
+    pwm_min = 1000
+    pwm_max = 2000
     vehicle_mot2 = log.get_dataset('actuator_outputs')
-    print(vehicle_mot2)
-    timestamps = vehicle_mot2.data['timestamp']
-    pwm = np.array(vehicle_mot2.data['output[8]'])
-    print(pwm)
 
-    return pwm, timestamps
+    timestamps = vehicle_mot2.data['timestamp']
+    pwms = np.array(vehicle_mot2.data['output[8]'])
+    thr = []
+    for pwm in pwms:
+        thr.append(round((pwm - pwm_min) / (pwm_max - pwm_min) * 100 ,2))
+
+    return thr, timestamps
+
+def get_hold_thr(log):
+
+    pwm_min = 1000
+    pwm_max = 2000
+    vehicle_mots = log.get_dataset('actuator_outputs')
+    timestamps = vehicle_mots.data['timestamp']
+    pwm = []
+    for num_mot in range(8):
+        str = f'output[{num_mot}]'
+        pwm_test = np.array(vehicle_mots.data[str])
+        pwm.append(np.array(vehicle_mots.data[str]))
+    if len(pwm[0])*8 != int(len(pwm_test)*8):
+        print("电机数据不完整")
+        return -1
+    else:
+        for i in range(len(pwm)):
+            for j in range(len(pwm[i])):
+                # print('原始数据',pwm[i][j])
+                pwm[i][j] = round((pwm[i][j] - pwm_min) / (pwm_max - pwm_min) * 100 ,2 )
+                # print('等效数据',pwm[i][j])
+        thr = []
+        for i in range(len(pwm_test)):
+            sum = 0
+            
+            for j in range(8):
+                # print('#########')
+                # print(pwm[j][i])
+                sum = sum + pwm[j][i]
+            avg = round(sum/8 , 2)
+            # print('#########',avg)
+            thr.append(avg)
+        
+    return thr , timestamps
+        
 
 
 if __name__ == "__main__":
     log_addr = get_addr()
     log,topic = get_log(log_addr,True)
 
+    avg_thr,avg_thr_t = get_hold_thr(log)
+
+
     ATT,time_ATT = get_ATT(log)
+
 
     Cur,Cur_t = get_curr(log)
     count_power_onsumption(log,100)
@@ -329,6 +373,26 @@ if __name__ == "__main__":
     BAT,time_bat = get_Power(log)
 
 
+    
+    title = 'test'
+    datas_list =[pitch,avg_thr,V_H,after_bured]
+    times_list = [time_ATT,avg_thr_t,time_V_H,time_after]
+    labels = ['degree','%','m/s','%']
+    legends = ['pitch_angle','hold_thr','speed','AB']   
+
+    plotter = ulog_data_ploter(times_list, datas_list, labels, title, legends)
+    plotter.plot()
+    
+
+
+
+
+
+
+
+
+
+
 
     # title = 'angle_speed_afterbupitch_V_rner_curr_alt'
     # datas_list =[pitch,V_H,Cur,after_bured]
@@ -339,15 +403,15 @@ if __name__ == "__main__":
     # plotter = ulog_data_ploter(times_list, datas_list, labels, title, legends)
     # plotter.plot()
     
-    ###
-    title = 'pitch_V_Afterburner'
-    datas_list =[pitch,V_H,after_bured]
-    times_list = [time_ATT,time_V_H,time_after]
-    labels = ['degree','m/s','us']
-    legends = ['pitch_angle','speed','AB']
+    # ###
+    # title = 'pitch_V_Afterburner'
+    # datas_list =[pitch,V_H,after_bured]
+    # times_list = [time_ATT,time_V_H,time_after]
+    # labels = ['degree','m/s','us']
+    # legends = ['pitch_angle','speed','AB']
 
-    plotter = ulog_data_ploter(times_list, datas_list, labels, title, legends)
-    plotter.plot()
+    # plotter = ulog_data_ploter(times_list, datas_list, labels, title, legends)
+    # plotter.plot()
 
 
     # ###

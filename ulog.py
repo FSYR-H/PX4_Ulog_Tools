@@ -394,14 +394,14 @@ if __name__ == "__main__":
 
 
 
-    # title = 'angle_speed_afterbupitch_V_rner_curr_alt'
-    # datas_list =[pitch,V_H,Cur,after_bured]
-    # times_list = [time_ATT,time_V_H,Cur_t,time_after]
-    # labels = ['degree','m/s','A','unknow','us']
-    # legends = ['pitch_angle','speed','curr','AB']   
+    title = 'angle_speed_afterbupitch_V_rner_curr_alt'
+    datas_list =[pitch,V_H,Cur,after_bured]
+    times_list = [time_ATT,time_V_H,Cur_t,time_after]
+    labels = ['degree','m/s','A','unknow','us']
+    legends = ['pitch_angle','speed','curr','AB']   
 
-    # plotter = ulog_data_ploter(times_list, datas_list, labels, title, legends)
-    # plotter.plot()
+    plotter = ulog_data_ploter(times_list, datas_list, labels, title, legends)
+    plotter.plot()
     
     # ###
     # title = 'pitch_V_Afterburner'

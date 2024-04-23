@@ -2,7 +2,6 @@ import pyulog
 from scipy.spatial.transform import Rotation
 import numpy as np
 import math
-import matplotlib.pyplot as plt
 import mplcursors
 import tkinter as tk
 from tkinter import filedialog
@@ -14,8 +13,8 @@ import sys
 import os
 import geopandas as gpd
 import contextily as cx
-import matplotlib.pyplot as plt
 from scipy.signal import savgol_filter
+
 
 #使用pyulog获取日志文件，并返回所有数据主题
 def get_log(log_addr, topics=None):
@@ -128,55 +127,7 @@ def get_RC_pwm(log,channel):
     return rc_input_channel,timestamps
 
 
-def plot_everything(data_series,titles,labels_in=None,legends_in=None,log=None):
-    if labels_in != None:
-        labels = labels_in
-    else:
-        labels = []
-    if legends_in != None:
-        legends = legends_in
-    else:
-        legends = []  
-    fig, host = plt.subplots()
-    fig.subplots_adjust(right=0.75)
 
-    # 存储每个Y轴和对应的数据系列
-    axes = [host]
-
-    # 创建其他的Y轴并绘制数据
-    colors = ['b', 'r', 'g', 'c', 'm', 'y', 'k']  # 颜色列表
-    lines = []  # 创建一个空列表
-
-    for i, series in enumerate(data_series):
-        if i == 0:
-            # 对于第一个数据系列，需要在主Y轴上绘制
-            p, = host.plot(series['timestamps'], series['data'], color=colors[i])
-            host.spines['left'].set_color(colors[i])  # 设置 Y 轴颜色与线的颜色一样
-            if labels and i < len(labels):  # 如果标签列表不为空且i没有超过标签的数量
-                host.set_ylabel(labels[i])
-            else:  # 如果标签列表为空或者i超过了标签的数量
-                host.set_ylabel('Data series {}'.format(i+1))
-        else:
-            # 对于其他的数据系列，需要创建一个新的Y轴并绘制
-            ax = host.twinx()
-            ax.spines['right'].set_position(('axes', 1 + i*0.05))  # 将Y轴向右移动
-            ax.spines['right'].set_color(colors[i % len(colors)])  # 设置 Y 轴颜色与线的颜色一样
-            p, = ax.plot(series['timestamps'], series['data'], color=colors[i % len(colors)])
-            if labels and i < len(labels):  # 如果标签列表不为空且i没有超过标签的数量
-                ax.set_ylabel(labels[i])
-            else:  # 如果标签列表为空或者i超过了标签的数量
-                ax.set_ylabel('Data series {}'.format(i+1))
-
-        lines.append(p)
-        plt.title(titles)
-    # 设置图例
-    add_mission(log)
-    if legends:
-        host.legend(lines, legends)
-    mplcursors.cursor(hover=True)
-
-    # 显示图形
-    plt.show()
 
 def get_addr():
     # 创建一个 Tkinter 对象，它是一个窗口
@@ -283,7 +234,74 @@ class ulog_data_ploter:
         if not self.check_data():
             return
         data_series = [{'timestamps': t, 'data': d} for t, d in zip(self.times_list, self.datas_list)]
-        plot_everything(data_series,self.title,self.labels,self.legends,self.log)
+        fig = self.plot_everything(data_series,self.title,self.labels,self.legends,self.log)
+        return fig
+        # 显示图形
+        # plt.show()
+    
+    def plot_save(self):
+        if not self.check_data():
+            return
+        data_series = [{'timestamps': t, 'data': d} for t, d in zip(self.times_list, self.datas_list)]
+        self.plot_everything(data_series,self.fig,self.title,self.labels,self.legends,self.log)
+        # 保存图形
+    
+        # plt.show()
+
+
+    def plot_everything(self,data_series,titles,labels_in=None,legends_in=None,log=None):
+        if labels_in != None:
+            labels = labels_in
+        else:
+            labels = []
+        if legends_in != None:
+            legends = legends_in
+        else:
+            legends = []  
+        fig, host = plt.subplots()
+        fig.subplots_adjust(right=0.75)
+
+        # 存储每个Y轴和对应的数据系列
+        axes = [host]
+
+        # 创建其他的Y轴并绘制数据
+        colors = ['b', 'r', 'g', 'c', 'm', 'y', 'k']  # 颜色列表
+        lines = []  # 创建一个空列表
+
+        for i, series in enumerate(data_series):
+            if i == 0:
+                # 对于第一个数据系列，需要在主Y轴上绘制
+                p, = host.plot(series['timestamps'], series['data'], color=colors[i])
+                host.spines['left'].set_color(colors[i])  # 设置 Y 轴颜色与线的颜色一样
+                if labels and i < len(labels):  # 如果标签列表不为空且i没有超过标签的数量
+                    host.set_ylabel(labels[i])
+                else:  # 如果标签列表为空或者i超过了标签的数量
+                    host.set_ylabel('Data series {}'.format(i+1))
+            else:
+                # 对于其他的数据系列，需要创建一个新的Y轴并绘制
+                ax = host.twinx()
+                ax.spines['right'].set_position(('axes', 1 + i*0.05))  # 将Y轴向右移动
+                ax.spines['right'].set_color(colors[i % len(colors)])  # 设置 Y 轴颜色与线的颜色一样
+                p, = ax.plot(series['timestamps'], series['data'], color=colors[i % len(colors)])
+                if labels and i < len(labels):  # 如果标签列表不为空且i没有超过标签的数量
+                    ax.set_ylabel(labels[i])
+                else:  # 如果标签列表为空或者i超过了标签的数量
+                    ax.set_ylabel('Data series {}'.format(i+1))
+
+            lines.append(p)
+            plt.title(titles)
+        # 设置图例
+        add_mission(log)
+        if legends:
+            host.legend(lines, legends)
+        mplcursors.cursor(hover=True)
+        return fig
+        # 显示图形
+        # plt.show()
+
+ 
+
+
 
 def get_Power(log):
     vehicle_power = log.get_dataset('battery_status')
@@ -590,8 +608,7 @@ if __name__ == "__main__":
 ####绘制第一张图
   
    
-
-    
+    fig = plt.figure()
     title = 'Roll Pithc Yaw with set_point'
     datas_list =[roll,pitch,yaw,roll2,pitch2,yaw2]
     times_list = [time_ATT,time_ATT,time_ATT,time_ATT,time_ATT,time_ATT]
@@ -601,112 +618,20 @@ if __name__ == "__main__":
 
     plotter = ulog_data_ploter(times_list, datas_list, labels, title, legends,log)
     plotter.plot()
-    
-#####绘制第二张图
 
-    title = 'low_thr with roll pitch yaw'
-    datas_list =[roll,pitch,yaw,avg_thr]
-    times_list = [time_ATT,time_ATT,time_ATT,avg_thr_t]
+# #####绘制第二张图
 
-    labels = ['degree','degree','degree','%']
-    legends = ['Roll','Pitch','Yaw','hold_Thr']   
+    title2 = 'low_thr with roll pitch yaw'
+    datas_list2 =[roll,pitch,yaw,avg_thr]
+    times_list2 = [time_ATT,time_ATT,time_ATT,avg_thr_t]
 
-    plotter = ulog_data_ploter(times_list, datas_list, labels, title, legends,log)
+    labels2 = ['degree','degree','degree','%']
+    legends2 = ['Roll','Pitch','Yaw','hold_Thr']   
+
+    plotter = ulog_data_ploter(times_list2, datas_list2, labels2, title2, legends2,log)
     plotter.plot()
 
-
-
-
-
-
-  # show_efficiency_flight(log)
-
-    # folder_addr_list = get_folder_address()
-    # flight_times = 0
-    # flight_time = 0
-    # overshot_r = []
-    # overshot_p = []
-    # overshot_y = []
-    # p_c = []
-    # road = 0
-    # avg_thr = []
-    # for log_addr in  folder_addr_list:
-        # log,topic = get_log(log_addr,True)
-        # ATT, time_ATT= get_ATT(log)
-        # ATT2, time_ATT2 = get_set_point_ATT(log)
-        # [roll2,pitch2,yaw2] = ATT2
-        # [roll,pitch,yaw] = ATT
-        # title = 'ATT'
-        # datas_list =[roll,pitch,yaw,roll2,pitch2,yaw2]
-        # times_list = [time_ATT,time_ATT,time_ATT,time_ATT2,time_ATT2,time_ATT2]
-        # labels = ['degree','degree','degree','degree','degree','degree']
-        # legends = ['roll','pitch','yaw','roll_set','pitch_set','yaw_set']   
-
-        # plotter = ulog_data_ploter(times_list, datas_list, labels, title, legends)
-        # plotter.plot()
-
-    #     flight_time += analysis_flight_time(log) 
-    #     print(analysis_flight_time(log))
-    #     flight_times += analysis_flight_times(log)
-    #     road_temp = analysis_flight_roads(log)
-    #     road += road_temp
-    #     overshot_r.append(analysis_att_d(log, False)[0])
-    #     overshot_p.append(analysis_att_d(log, False)[1])
-    #     overshot_y.append(analysis_att_d(log, False)[2])
-
-    #     avg_thr.append(analysis_flight_hold_thr(log))
-
-    #     if road_temp > 2:
-    #         cost = count_power_onsumption(log)
-    #         runed = road_temp
-    #         temp = round(cost/runed,2)
-    #         p_c.append(temp)
-
-
-
-
-    # overshot_r = list(filter(lambda x: x != 0, overshot_r))
-    # overshot_p = list(filter(lambda x: x != 0, overshot_p))
-    # overshot_y = list(filter(lambda x: x != 0, overshot_y))
-    # p_c = list(filter(lambda x: x != 0, p_c)) 
-
-    # # print(avrg(p_c))
-    # print('有效飞行时间:' ,round(flight_time/60),'min')
-    # print('有效飞行架次' ,flight_times)
-    # print('有效累计里程',road,'km')
-    # print('平均单位里程消耗', np.median(p_c))
-    
-    
-    # print(len(overshot_r))
-
-    # fig, axes = plt.subplots(3, 2, sharex=True, figsize=(10, 6))
-
-    # # 绘制折线图
-    # axes[0, 0].plot(overshot_r, color='blue')
-    # axes[0, 0].plot(overshot_p, color='green')
-    # axes[0, 0].set_title("Roll Overshoot")
-    # axes[0, 0].set_ylabel("Overshoot Percentage (%)")
-
-    # axes[1, 0].plot(overshot_p, color='green')
-    # axes[1, 0].set_title("Pitch Overshoot")
-    # axes[1, 0].set_ylabel("Overshoot Percentage (%)")
-
-    # axes[2,1].plot(avg_thr, color='red')
-    # axes[2,1].set_title("Yaw Overshoot")
-    # axes[2,1].set_ylabel("Overshoot Percentage (%)")
-    # axes[2,1].set_xlabel("Flight Number")
-
-    # # 调整子图之间的间距
-    # plt.subplots_adjust(hspace=0.5)
-
-    # # 显示图表
-    # plt.show()
-  
-
-
-
-
-
+    plt.show()
   
 
 

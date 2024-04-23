@@ -1,4 +1,5 @@
 import pyulog
+import rasterio.sample
 from scipy.spatial.transform import Rotation
 import numpy as np
 import math
@@ -16,6 +17,10 @@ import contextily as cx
 from scipy.signal import savgol_filter
 from pyulog import ULog
 import csv
+
+def display_messagebox(): 
+	tk.messagebox.showinfo(title='display_messagebox',
+		message='This is a showinfo_messagebox')  
 
 def get_addr():
     root = tk.Tk()
@@ -346,3 +351,7 @@ if __name__ == '__main__':
             writer = csv.writer(f)
             # write the header
             writer.writerow(line_str)
+    
+    messagebox.showinfo('分析完成', '点击退出')
+
+    sys.exit()

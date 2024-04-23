@@ -207,7 +207,7 @@ def get_folder_address():
 
     # 检查是否选择了文件夹
     if folder_addr:
-        print('已获取文件夹地址：', folder_addr)
+        print('已获取文件夹')
     else:
         messagebox.showerror('错误!', '请选择正确文件!!')
         sys.exit()
@@ -304,6 +304,8 @@ def count_power_onsumption(log,pre_fly_power=None):
     Vot = np.array(vehicle_power.data['voltage_v'])
     Cur = np.array(vehicle_power.data['current_a'])
     Vot_mean = np.median(Vot)
+    Vot_max = np.max(Vot)
+    Vot_min = np.min(Vot)
     if pre_fly_power == None:
         pre_fly_power = 5
     else:
@@ -329,14 +331,14 @@ def count_power_onsumption(log,pre_fly_power=None):
     time_skip = round((time_end - time_start)/1000000/60/60 , 5) # 小时
 
     P_count = round(P_avg * time_skip * 1000 / Vot_mean , 2) 
-    print(Vot_mean)
 
-  
+    print(f'平均电压为:{Vot_mean}')
     print(f'平均功率为:  {str(P_avg)} W')
     print(f'最大功率为: {max_power}W')
     print('消耗为：' + str(P_count) + 'mah')
-    
-    return P_count
+    #BAT_INFO 消耗毫安值、最大电压、最小电压、平均电压、最大功率、平均功率
+    bat_info = [P_count,Vot_max,Vot_min,Vot_mean,max_power,P_count]
+    return bat_info
     
 
 def get_alt(log):
@@ -433,7 +435,6 @@ def analysis_flight_time(log):
         if time_end == 0:
             time_end = timestamps[-1]
             # print(min(pwms))
-
         flight_time = round((time_end - time_start) / 1000000,2)
     return flight_time
 
@@ -493,39 +494,6 @@ def analysis_flight_hold_thr(log):
         avg_thr = np.median(thr)
         return avg_thr
 
-def show_position(log):
-    vehicle_pos_fix = log.get_dataset('estimator_global_position')
-    lon_fix = vehicle_pos_fix.data['lon']
-    lat_fix = vehicle_pos_fix.data['lat']
-    alt_fix = vehicle_pos_fix.data['alt']
-
-    vehicle_pos_gps = log.get_dataset('sensor_gps')
-    lon_gps = vehicle_pos_gps.data['longitude_deg']
-    lat_gps = vehicle_pos_gps.data['latitude_deg']
-    alt_gps = vehicle_pos_gps.data['altitude_ellipsoid_m']
-
-    vehicle_pos_set = log.get_dataset('position_setpoint_triplet')
-    lon_temp = vehicle_pos_set.data['next.lon']
-    lat_temp = vehicle_pos_set.data['next.lat']
-
-    lon_set = [x for x in lon_temp if math.isnan(x) == False]
-    lat_set = [x for x in lat_temp if math.isnan(x) == False]
-    
-    # print(lon_set)
-
-    # print(lon_fix)
-
-    plt.plot(lon_gps,lat_gps, label='GPS_DATA')
-    plt.plot(lon_fix,lat_fix, label='FIX_DATA')
-    # plt.plot(lon_set,lat_set, label='SET_DATA', marker = 'o')
-    plt.scatter(lon_set, lat_set, marker='o', color='blue', label='set_mission_point')
-    plt.title('POSITION')
-    plt.xlabel('LON')
-    plt.ylabel('LAT')
-    plt.legend()
-    plt.grid()
-    plt.show()
-
 def add_mission(log,analysis=None):
     mission_num = 3
     Window = 5
@@ -582,22 +550,10 @@ if __name__ == "__main__":
     avg_thr = []
     for log_addr in  folder_addr_list:
         log,topic = get_log(log_addr,True)
-        ATT, time_ATT= get_ATT(log)
-        ATT2, time_ATT2 = get_set_point_ATT(log)
-        [roll2,pitch2,yaw2] = ATT2
-        [roll,pitch,yaw] = ATT
-
-        title = 'ATT'
-        datas_list =[roll,pitch,yaw,roll2,pitch2,yaw2]
-        times_list = [time_ATT,time_ATT,time_ATT,time_ATT2,time_ATT2,time_ATT2]
-        labels = ['degree','degree','degree','degree','degree','degree']
-        legends = ['roll','pitch','yaw','roll_set','pitch_set','yaw_set']   
-
-        plotter = ulog_data_ploter(times_list, datas_list, labels, title, legends,log)
-        plotter.plot()
 
         flight_time += analysis_flight_time(log) 
         print(f'单次飞行时间为:{analysis_flight_time(log)}s')
+
         flight_times += analysis_flight_times(log)
         road_temp = analysis_flight_roads(log)
         print(f'里程为: {road_temp}Km')
@@ -605,16 +561,18 @@ if __name__ == "__main__":
 
         avg_thr.append(analysis_flight_hold_thr(log))
 
+        #仅计算超过2km的单位消耗
         if road_temp > 2:
             cost = count_power_onsumption(log)
             runed = road_temp
-            temp = round(cost/runed,2)
+            temp = round(cost[0]/runed,2)
             p_c.append(temp)
-            
-    print('有效飞行时间:' ,round(flight_time/60),'min')
-    print('有效飞行架次' ,flight_times)
-    print('有效累计里程',road,'km')
-    print(f'平均单位里程消耗 {np.median(p_c)} mah',)
+
+
+    print(f'有效飞行时间: {round(flight_time/60)}min')
+    print(f'有效飞行架次: {flight_times} 次')
+    print(f'有效累计里程: {road}km')
+    print(f'平均单位里程消耗: {np.median(p_c)} mah/km',)
 
 
 

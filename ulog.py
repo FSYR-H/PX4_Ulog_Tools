@@ -11,6 +11,12 @@ import numpy as np
 import time
 from tkinter import filedialog, messagebox
 import sys
+import os
+import geopandas as gpd
+import contextily as cx
+import matplotlib.pyplot as plt
+from scipy.signal import savgol_filter
+
 #使用pyulog获取日志文件，并返回所有数据主题
 def get_log(log_addr, topics=None):
     if 'ulg' not in log_addr:
@@ -26,10 +32,10 @@ def get_log(log_addr, topics=None):
         topics = log.data_list
         # renamed = False  # 初始化为False
         count = 0
-        for topic in topics:
-            print(topic.name)
+        # for topic in topics:
+        #     # print(topic.name)
         if topics:
-            print('all topic get')
+            # print('all topic get')
             return log, topics
         else:
             print('no topic')
@@ -45,16 +51,16 @@ def Quat2Angle(q_x, q_y, q_z, q_w):
     ATT = [roll,pitch,yaw]
     return ATT
 
-def plot_ATT(ATT):
-    fig, axs = plt.subplots(3, 1, figsize=(10,10), sharex=True)
-    axs[0].plot(ATT[0])
-    axs[0].set_title('Roll')
-    axs[1].plot(ATT[1])
-    axs[1].set_title('Pitch')
-    axs[2].plot(ATT[2])
-    axs[2].set_title('Yaw')
-    plt.tight_layout()
-    plt.show()
+# def plot_ATT(ATT):
+#     fig, axs = plt.subplots(3, 1, figsize=(10,10), sharex=True)
+#     axs[0].plot(ATT[0])
+#     axs[0].set_title('Roll')
+#     axs[1].plot(ATT[1])
+#     axs[1].set_title('Pitch')
+#     axs[2].plot(ATT[2])
+#     axs[2].set_title('Yaw')
+#     plt.tight_layout()
+#     plt.show()
 
 
 def get_ATT(log):
@@ -73,9 +79,27 @@ def get_ATT(log):
         roll.append(ATT_temp[0])
         pitch.append(ATT_temp[1])
         yaw.append(ATT_temp[2])
-    print(len(q_w))
+    # print(len(q_w))
     return [roll,pitch,yaw],timestamps
 
+def get_set_point_ATT(log):
+    roll = []
+    pitch =[]
+    yaw = []
+    # 获取 vehicle_attitude 主题
+    vehicle_attitude = log.get_dataset('vehicle_attitude_setpoint')
+    timestamps = vehicle_attitude.data['timestamp']
+    q_w = vehicle_attitude.data['q_d[0]']
+    q_x = vehicle_attitude.data['q_d[1]']
+    q_y = vehicle_attitude.data['q_d[2]']
+    q_z = vehicle_attitude.data['q_d[3]']
+    for i in range(len(q_w)):
+        ATT_temp = Quat2Angle(q_x[i],q_y[i],q_z[i],q_w[i])
+        roll.append(ATT_temp[0])
+        pitch.append(ATT_temp[1])
+        yaw.append(ATT_temp[2])
+    # print(len(q_w))
+    return [roll,pitch,yaw],timestamps
 
 
 def get_velocity(log):
@@ -104,7 +128,7 @@ def get_RC_pwm(log,channel):
     return rc_input_channel,timestamps
 
 
-def plot_everything(data_series,titles,labels_in=None,legends_in=None):
+def plot_everything(data_series,titles,labels_in=None,legends_in=None,log=None):
     if labels_in != None:
         labels = labels_in
     else:
@@ -122,9 +146,10 @@ def plot_everything(data_series,titles,labels_in=None,legends_in=None):
     # 创建其他的Y轴并绘制数据
     colors = ['b', 'r', 'g', 'c', 'm', 'y', 'k']  # 颜色列表
     lines = []  # 创建一个空列表
+
     for i, series in enumerate(data_series):
         if i == 0:
-            # 对于第一个数据系列，我们在主Y轴上绘制
+            # 对于第一个数据系列，需要在主Y轴上绘制
             p, = host.plot(series['timestamps'], series['data'], color=colors[i])
             host.spines['left'].set_color(colors[i])  # 设置 Y 轴颜色与线的颜色一样
             if labels and i < len(labels):  # 如果标签列表不为空且i没有超过标签的数量
@@ -132,7 +157,7 @@ def plot_everything(data_series,titles,labels_in=None,legends_in=None):
             else:  # 如果标签列表为空或者i超过了标签的数量
                 host.set_ylabel('Data series {}'.format(i+1))
         else:
-            # 对于其他的数据系列，我们创建一个新的Y轴并绘制
+            # 对于其他的数据系列，需要创建一个新的Y轴并绘制
             ax = host.twinx()
             ax.spines['right'].set_position(('axes', 1 + i*0.05))  # 将Y轴向右移动
             ax.spines['right'].set_color(colors[i % len(colors)])  # 设置 Y 轴颜色与线的颜色一样
@@ -145,6 +170,7 @@ def plot_everything(data_series,titles,labels_in=None,legends_in=None):
         lines.append(p)
         plt.title(titles)
     # 设置图例
+    add_mission(log)
     if legends:
         host.legend(lines, legends)
     mplcursors.cursor(hover=True)
@@ -170,6 +196,45 @@ def get_addr():
         return
     return log_addr
 
+def get_folder_address():
+    # 创建一个 Tkinter 窗口，但立即隐藏它
+    root = tk.Tk()
+    root.withdraw()
+    messagebox.showinfo("提示", "请选择一个 .ulg 文件夹")
+    # 打开一个文件夹选择对话框
+    folder_addr = filedialog.askdirectory()
+
+    # 检查是否选择了文件夹
+    if folder_addr:
+        print('已获取文件夹地址：', folder_addr)
+    else:
+        messagebox.showerror('错误!', '请选择正确文件!!')
+        sys.exit()
+        return
+    adr_lists = []
+    # 检查文件夹是否存在
+    if os.path.isdir(folder_addr):
+        # 获取文件夹中的所有文件
+        files = os.listdir(folder_addr)
+
+        # 遍历文件并打印它们的地址
+        count = 0
+        for file in files:
+            
+            if '.ulg' in str(file):
+                file_addr = os.path.normpath(os.path.join(folder_addr, file))
+                adr_lists.append(file_addr)
+                # print('文件地址：', file_addr)
+            else:
+                count = count + 1
+    else:
+        print("无效的文件夹地址")
+        if count > 0:
+            print('文件有残缺')
+    # print(adr_lists)
+
+    return adr_lists
+
 def get_log(log_addr, topics=None):
     if 'ulg' not in log_addr:
         return
@@ -183,22 +248,23 @@ def get_log(log_addr, topics=None):
         topics = log.data_list
         # renamed = False  # 初始化为False
         count = 0
-        for topic in topics:
-            print(topic.name)
+        # for topic in topics:
+            # print(topic.name)
         if topics:
-            print('all topic get')
+            # print('all topic get')
             return log, topics
         else:
             print('no topic')
 
 
 class ulog_data_ploter:
-    def __init__(self, times_list, datas_list, labels, title, legends):
+    def __init__(self, times_list, datas_list, labels, title, legends,log):
         self.times_list = times_list
         self.datas_list = datas_list
         self.labels = labels
         self.title = title
         self.legends = legends
+        self.log = log
 
     def check_data(self):
         if len(self.times_list) != len(self.datas_list):
@@ -217,7 +283,7 @@ class ulog_data_ploter:
         if not self.check_data():
             return
         data_series = [{'timestamps': t, 'data': d} for t, d in zip(self.times_list, self.datas_list)]
-        plot_everything(data_series,self.title,self.labels,self.legends)
+        plot_everything(data_series,self.title,self.labels,self.legends,self.log)
 
 def get_Power(log):
     vehicle_power = log.get_dataset('battery_status')
@@ -236,7 +302,7 @@ def count_power_onsumption(log,pre_fly_power=None):
     timestamps = vehicle_power.data['timestamp']
     Vot = np.array(vehicle_power.data['voltage_v'])
     Cur = np.array(vehicle_power.data['current_a'])
-    
+    Vot_mean = np.median(Vot)
     if pre_fly_power == None:
         pre_fly_power = 5
     else:
@@ -259,21 +325,18 @@ def count_power_onsumption(log,pre_fly_power=None):
             break
             
     max_power = max(P)
-    time_skip = round((time_end - time_start)/1000000 , 2)
-    P_count = round(P_avg * time_skip / 1000, 2) 
+    time_skip = round((time_end - time_start)/1000000/60/60 , 5) # 小时
 
+    P_count = round(P_avg * time_skip * 1000 / Vot_mean , 2) 
+    print(Vot_mean)
 
-    # print('平均速度为: ' + str(V_avg) + 'W')
-    print('平均功率为: ' + str(P_avg) + 'W')
-    # print(f'最大功率为: {max_power}')
-    print('功耗为：' + str(P_count) + 'kJ')
-
-    print('飞行时间为: ' +str(time_skip)+'s')
-    # 创建一个 Tkinter 对象，它是一个窗口
-    root = tk.Tk()
-    # 这行代码让窗口在打开文件对话框后就自动关闭
-    root.withdraw()
-    messagebox.showinfo("提示", f"起飞后的平均功率、功耗是：{P_avg} W,{P_count} kJ")
+  
+    print(f'平均功率为:  {str(P_avg)} W')
+    print(f'最大功率为: {max_power}W')
+    print('消耗为：' + str(P_count) + 'mah')
+    
+    return P_count
+    
 
 def get_alt(log):
     if log == None:
@@ -289,6 +352,7 @@ def get_curr(log):
     vehicle_power = log.get_dataset('battery_status')
     timestamps = vehicle_power.data['timestamp']
     Cur = np.array(vehicle_power.data['current_a'])
+    Cur = savgol_filter(Cur, 50, 5, mode= 'nearest')
     print(vehicle_power)
     return Cur,timestamps 
 
@@ -303,7 +367,7 @@ def get_afterburad_ORANG(log):
 
 def get_afterburad_CUAV(log):
     pwm_min = 1000
-    pwm_max = 2000
+    pwm_max = 00
     vehicle_mot2 = log.get_dataset('actuator_outputs')
 
     timestamps = vehicle_mot2.data['timestamp']
@@ -316,7 +380,7 @@ def get_afterburad_CUAV(log):
 
 def get_hold_thr(log):
 
-    pwm_min = 1000
+    pwm_min = 1200
     pwm_max = 2000
     vehicle_mots = log.get_dataset('actuator_outputs')
     timestamps = vehicle_mots.data['timestamp']
@@ -348,79 +412,302 @@ def get_hold_thr(log):
         
     return thr , timestamps
         
+def analysis_flight_time(log):
+    vehicle_mots = log.get_dataset('actuator_outputs')
+    timestamps = vehicle_mots.data['timestamp']
+    pwms = np.array(vehicle_mots.data['output[1]'])
+    flag = analysis_flight_times(log)
+    if flag == 0:
+        flight_time = 0
+    else:
+        for i in range(len(pwms)):
+            if int(pwms[i]) > 1000:
+                time_start = timestamps[i]
+                break
+        time_end = 0
+        for i in range(len(pwms)-1,1,-1):
+            if int(pwms[i]) < 1100:
+                time_end = timestamps[i]
+                break
+        if time_end == 0:
+            time_end = timestamps[-1]
+            print(min(pwms))
+
+        flight_time = round((time_end - time_start) / 1000000,2)
+    return flight_time
+
+def analysis_att_d(log,flag):
+    ATT1,time_ATT = get_set_point_ATT(log)
+    ATT2,time_ATT = get_ATT(log)
+    rpy_d_z = [0,0,0]
+    rpy_d_f = [0,0,0]
+    if analysis_flight_times(log) != 0:
+        r_d = []
+        p_d = []
+        y_d = [] 
+        ATT_D = [r_d,p_d,y_d]
+        
+        arg = 150
+        for j in range(3):
+            for i in range(len(ATT1[j])):
+                if ATT1[j][i] != 0:
+                    temp = round(((ATT1[j][i] - ATT2[j][i]) / ATT1[j][i] * 100),2)
+                else:
+                    temp = round((ATT1[j][i] - ATT2[j][i]) * 100,2)
+                if temp > arg and temp > 0:
+                    rpy_d_z[j] += 1
+                elif abs(temp) > arg and temp < 0:
+                    rpy_d_f[j] += 1
+
+        for i in range(3):
+            rpy_d_z[i] = round((rpy_d_z[i]/len(ATT1[0])*100),2)
+            rpy_d_f[i] = round((rpy_d_f[i]/len(ATT1[0])*100),2)
+    if flag == True:
+        rpy_d = rpy_d_z
+    else:
+        rpy_d = rpy_d_f
+    return rpy_d
+
+def analysis_flight_times(log):
+    v_h ,_ ,_ = get_velocity(log)
+    if max(v_h) > 2:
+        flag = 1
+    else:
+        flag = 0
+    return flag
+
+def analysis_flight_roads(log):
+    roads = 0
+    if analysis_flight_times(log) == 1:
+        v_hor,_,_ = get_velocity(log)
+        median_v_Hor = np.median(v_hor)
+        time = analysis_flight_time(log)
+        roads = median_v_Hor * time / 1000
+    return round(roads,2)
+
+
+def analysis_flight_hold_thr(log):
+    if analysis_flight_times(log) == 1:
+        thr, _= get_hold_thr(log)
+        avg_thr = np.median(thr)
+        return avg_thr
+
+def show_position(log):
+    vehicle_pos_fix = log.get_dataset('estimator_global_position')
+    lon_fix = vehicle_pos_fix.data['lon']
+    lat_fix = vehicle_pos_fix.data['lat']
+    alt_fix = vehicle_pos_fix.data['alt']
+
+    vehicle_pos_gps = log.get_dataset('sensor_gps')
+    lon_gps = vehicle_pos_gps.data['longitude_deg']
+    lat_gps = vehicle_pos_gps.data['latitude_deg']
+    alt_gps = vehicle_pos_gps.data['altitude_ellipsoid_m']
+
+    vehicle_pos_set = log.get_dataset('position_setpoint_triplet')
+    lon_temp = vehicle_pos_set.data['next.lon']
+    lat_temp = vehicle_pos_set.data['next.lat']
+
+    lon_set = [x for x in lon_temp if math.isnan(x) == False]
+    lat_set = [x for x in lat_temp if math.isnan(x) == False]
+    
+    print(lon_set)
+
+    print(lon_fix)
+
+    plt.plot(lon_gps,lat_gps, label='GPS_DATA')
+    plt.plot(lon_fix,lat_fix, label='FIX_DATA')
+    # plt.plot(lon_set,lat_set, label='SET_DATA', marker = 'o')
+    plt.scatter(lon_set, lat_set, marker='o', color='blue', label='set_mission_point')
+    plt.title('POSITION')
+    plt.xlabel('LON')
+    plt.ylabel('LAT')
+    plt.legend()
+    plt.grid()
+    plt.show()
+
+def add_mission(log,analysis=None):
+    mission_num = 3
+    Window = 5
+    vehicle_mission = log.get_dataset('vehicle_status')
+    mission_flag = vehicle_mission.data['nav_state']
+    timestamps = vehicle_mission.data['timestamp']
+    print(len(mission_flag),len(timestamps))
+    
+    index_flag = []
+    show_range = []
+    for index in range(len(mission_flag)):
+        if mission_flag[index] == 3:
+            print('mission_start')
+            index_flag.append(timestamps[index])
+            show_range.append(3)
+            break
+
+    #找到拐点
+    index = 0
+    while index < len(mission_flag)-Window:
+        temp = Window
+        for j in range(index,index+Window):
+            dt = float(float((mission_flag[index+5] - mission_flag[index])) / float((timestamps[index+5] - timestamps[index])))
+            if dt != 0 and (mission_flag[index] != mission_num and mission_flag[index+1] == mission_num) or (mission_flag[index] == mission_num and mission_flag[index+1] != mission_num):
+                temp = temp - 1
+                if temp == 0:
+                    index_flag.append(timestamps[index+4])
+                    show_range.append(mission_flag[index+4])
+                    index += Window - 1  # 跳过接下来的4个点
+                    break
+        index += 1
+    
+    if len(index_flag) % 2 != 0:
+        print('mission标志检测失败')
+        return 
+
+    if analysis == None:
+        for i in range(0,len(index_flag),2):
+            plt.axvspan(index_flag[i], index_flag[i+1], facecolor='g', alpha=0.2)
+    return index_flag
 
 
 if __name__ == "__main__":
     log_addr = get_addr()
     log,topic = get_log(log_addr,True)
 
-    avg_thr,avg_thr_t = get_hold_thr(log)
 
-
+    ##获取无人机信息
+    after_bured,time_after = get_afterburad_CUAV(log)
     ATT,time_ATT = get_ATT(log)
-
-
+    ATT2, time_ATT2 = get_set_point_ATT(log)
+    [roll2,pitch2,yaw2] = ATT2
+    [roll,pitch,yaw] = ATT
+    avg_thr,avg_thr_t= get_hold_thr(log)
+    V_H , _ , time_V_H = get_velocity(log)
     Cur,Cur_t = get_curr(log)
+    ch1 , time_ch1 = get_RC_pwm(log,1)
+    BAT,time_bat = get_Power(log)
     count_power_onsumption(log,100)
 
-    after_bured,time_after = get_afterburad_CUAV(log)
+    
 
-    [roll,pitch,yaw] = ATT
-    V_H , _ , time_V_H = get_velocity(log)
-
-    # ch1 , time_ch1 = get_RC_pwm(log,1)
-
-    BAT,time_bat = get_Power(log)
-
+####绘制第一张图
+  
+   
 
     
-    title = 'test'
-    datas_list =[pitch,avg_thr,V_H,after_bured]
-    times_list = [time_ATT,avg_thr_t,time_V_H,time_after]
-    labels = ['degree','%','m/s','%']
-    legends = ['pitch_angle','hold_thr','speed','AB']   
+    title = 'Roll Pithc Yaw with set_point'
+    datas_list =[roll,pitch,yaw,roll2,pitch2,yaw2]
+    times_list = [time_ATT,time_ATT,time_ATT,time_ATT,time_ATT,time_ATT]
 
-    plotter = ulog_data_ploter(times_list, datas_list, labels, title, legends)
+    labels = ['degree','degree','degree','degree','degree','degree']
+    legends = ['Roll','Pitch','Yaw','Roll_set','Pitch_set','Yaw_set']   
+
+    plotter = ulog_data_ploter(times_list, datas_list, labels, title, legends,log)
     plotter.plot()
     
+#####绘制第二张图
 
+    title = 'low_thr with roll pitch yaw'
+    datas_list =[roll,pitch,yaw,avg_thr]
+    times_list = [time_ATT,time_ATT,time_ATT,avg_thr_t]
 
+    labels = ['degree','degree','degree','%']
+    legends = ['Roll','Pitch','Yaw','hold_Thr']   
 
-
-
-
-
-
-
-
-
-    title = 'angle_speed_afterbupitch_V_rner_curr_alt'
-    datas_list =[pitch,V_H,Cur,after_bured]
-    times_list = [time_ATT,time_V_H,Cur_t,time_after]
-    labels = ['degree','m/s','A','unknow','us']
-    legends = ['pitch_angle','speed','curr','AB']   
-
-    plotter = ulog_data_ploter(times_list, datas_list, labels, title, legends)
+    plotter = ulog_data_ploter(times_list, datas_list, labels, title, legends,log)
     plotter.plot()
+
+
+
+
+
+
+  # show_efficiency_flight(log)
+
+    # folder_addr_list = get_folder_address()
+    # flight_times = 0
+    # flight_time = 0
+    # overshot_r = []
+    # overshot_p = []
+    # overshot_y = []
+    # p_c = []
+    # road = 0
+    # avg_thr = []
+    # for log_addr in  folder_addr_list:
+        # log,topic = get_log(log_addr,True)
+        # ATT, time_ATT= get_ATT(log)
+        # ATT2, time_ATT2 = get_set_point_ATT(log)
+        # [roll2,pitch2,yaw2] = ATT2
+        # [roll,pitch,yaw] = ATT
+        # title = 'ATT'
+        # datas_list =[roll,pitch,yaw,roll2,pitch2,yaw2]
+        # times_list = [time_ATT,time_ATT,time_ATT,time_ATT2,time_ATT2,time_ATT2]
+        # labels = ['degree','degree','degree','degree','degree','degree']
+        # legends = ['roll','pitch','yaw','roll_set','pitch_set','yaw_set']   
+
+        # plotter = ulog_data_ploter(times_list, datas_list, labels, title, legends)
+        # plotter.plot()
+
+    #     flight_time += analysis_flight_time(log) 
+    #     print(analysis_flight_time(log))
+    #     flight_times += analysis_flight_times(log)
+    #     road_temp = analysis_flight_roads(log)
+    #     road += road_temp
+    #     overshot_r.append(analysis_att_d(log, False)[0])
+    #     overshot_p.append(analysis_att_d(log, False)[1])
+    #     overshot_y.append(analysis_att_d(log, False)[2])
+
+    #     avg_thr.append(analysis_flight_hold_thr(log))
+
+    #     if road_temp > 2:
+    #         cost = count_power_onsumption(log)
+    #         runed = road_temp
+    #         temp = round(cost/runed,2)
+    #         p_c.append(temp)
+
+
+
+
+    # overshot_r = list(filter(lambda x: x != 0, overshot_r))
+    # overshot_p = list(filter(lambda x: x != 0, overshot_p))
+    # overshot_y = list(filter(lambda x: x != 0, overshot_y))
+    # p_c = list(filter(lambda x: x != 0, p_c)) 
+
+    # # print(avrg(p_c))
+    # print('有效飞行时间:' ,round(flight_time/60),'min')
+    # print('有效飞行架次' ,flight_times)
+    # print('有效累计里程',road,'km')
+    # print('平均单位里程消耗', np.median(p_c))
     
-    # ###
-    # title = 'pitch_V_Afterburner'
-    # datas_list =[pitch,V_H,after_bured]
-    # times_list = [time_ATT,time_V_H,time_after]
-    # labels = ['degree','m/s','us']
-    # legends = ['pitch_angle','speed','AB']
-
-    # plotter = ulog_data_ploter(times_list, datas_list, labels, title, legends)
-    # plotter.plot()
-
-
-    # ###
-    # title = 'flight power with or without Afterburner & speed'
-    # labels = ['W','us','m/s']
-    # legends = ['flight power','ch12','speed']
-    # times_list = [time_bat,time_ch12,time_V_H]
-    # datas_list = [BAT[2],ch12,V_H]
     
-    # plotter = ulog_data_ploter(times_list, datas_list, labels, title, legends)
-    # plotter.plot()
+    # print(len(overshot_r))
 
+    # fig, axes = plt.subplots(3, 2, sharex=True, figsize=(10, 6))
+
+    # # 绘制折线图
+    # axes[0, 0].plot(overshot_r, color='blue')
+    # axes[0, 0].plot(overshot_p, color='green')
+    # axes[0, 0].set_title("Roll Overshoot")
+    # axes[0, 0].set_ylabel("Overshoot Percentage (%)")
+
+    # axes[1, 0].plot(overshot_p, color='green')
+    # axes[1, 0].set_title("Pitch Overshoot")
+    # axes[1, 0].set_ylabel("Overshoot Percentage (%)")
+
+    # axes[2,1].plot(avg_thr, color='red')
+    # axes[2,1].set_title("Yaw Overshoot")
+    # axes[2,1].set_ylabel("Overshoot Percentage (%)")
+    # axes[2,1].set_xlabel("Flight Number")
+
+    # # 调整子图之间的间距
+    # plt.subplots_adjust(hspace=0.5)
+
+    # # 显示图表
+    # plt.show()
+  
+
+
+
+
+
+  
+
+
+    

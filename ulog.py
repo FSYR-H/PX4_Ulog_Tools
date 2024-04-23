@@ -385,7 +385,7 @@ def get_afterburad_ORANG(log):
 
 def get_afterburad_CUAV(log):
     pwm_min = 1000
-    pwm_max = 00
+    pwm_max = 2000
     vehicle_mot2 = log.get_dataset('actuator_outputs')
 
     timestamps = vehicle_mot2.data['timestamp']
@@ -604,11 +604,11 @@ if __name__ == "__main__":
     count_power_onsumption(log,100)
 
     
-
+    show_position(log)
 ####绘制第一张图
   
    
-    fig = plt.figure()
+   
     title = 'Roll Pithc Yaw with set_point'
     datas_list =[roll,pitch,yaw,roll2,pitch2,yaw2]
     times_list = [time_ATT,time_ATT,time_ATT,time_ATT,time_ATT,time_ATT]

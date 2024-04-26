@@ -374,12 +374,6 @@ if __name__ == '__main__':
     progress.pack()
     total_items = len(log_list)
 
-
-
-
-
-
-
     for i, log_addr in enumerate(log_list):
 
         log,topic = get_log(log_addr,True)

@@ -5,7 +5,6 @@ import numpy as np
 import math
 import mplcursors
 import tkinter as tk
-from tkinter import filedialog
 import matplotlib.pyplot as plt
 import numpy as np
 import time
@@ -17,6 +16,8 @@ import contextily as cx
 from scipy.signal import savgol_filter
 from pyulog import ULog
 import csv
+from tkinter import ttk
+
 
 def display_messagebox(): 
 	tk.messagebox.showinfo(title='display_messagebox',
@@ -112,13 +113,8 @@ def add_mission(log):
                     break
         index += 1
     if len(index_flag) % 2 != 0:
-        print('mission标志检测失败,正在删除第一个')
+        print('mission标志检测失败,正在跳过')
         del index_flag[0]
- 
-
-    
-    #     plt.axvspan(index_flag[i], index_flag[i+1], facecolor='g', alpha=0.2)
-
     return index_flag
 
 
@@ -130,12 +126,25 @@ def get_curr(log):
     timestamps = vehicle_power.data['timestamp']
     
     Cur = np.array(vehicle_power.data['current_a'])
-    Cur = savgol_filter(Cur, 50, 5, mode= 'nearest')
+    # Cur = savgol_filter(Cur, 50, 5, mode= 'nearest')
     #1830 -> 1386
+    # print(Cur)
     return Cur,timestamps 
 
-def follw_index(index_flag,data,timestamps):
+def get_vot(log):
+    if log == None:
+        return
+    
+    vehicle_power = log.get_dataset('battery_status')
+    timestamps = vehicle_power.data['timestamp']
+    
+    Vot = np.array(vehicle_power.data['voltage_v'])
+    # Cur = savgol_filter(Cur, 50, 5, mode= 'nearest')
+    #1830 -> 1386
+    return Vot,timestamps 
 
+
+def follw_index(index_flag,data,timestamps):
     new_timestamps = []
     new_data = []
     for i in range(0,len(index_flag),2):
@@ -163,6 +172,22 @@ def get_A20(log_addr):
         if 'A20' in param_name:
             A20.append(round(param_value,2))
     return A20[1:]
+
+
+def get_AIR_MODE(log_addr):
+
+    ulog = ULog(log_addr)
+    # 获取参数
+    params = ulog.initial_parameters
+    # 打印所有参数
+    A20=[]
+    for param_name, param_value in params.items():
+        if 'MC_AIR' in param_name:
+            # A20.append(round(param_value,2))
+            # print(FLAG)
+            FLAG = round(param_value,2)
+            print(FLAG)
+    return FLAG
 
 def get_afterburad_CUAV(log):
     pwm_min = 1000
@@ -232,6 +257,7 @@ def count_power_onsumption_index(log,index,pre_fly_power=None):
     Vot,timestamps = follw_index(index,Vot,timestamps)
     Cur,timestamps = follw_index(index,Cur,timestamps)
 
+    Cur_medin = np.median(Cur)
     Vot_mean = np.median(Vot)
     Vot_max = np.max(Vot)
     Vot_min = np.min(Vot)
@@ -261,38 +287,119 @@ def count_power_onsumption_index(log,index,pre_fly_power=None):
 
     P_count = round(P_avg * time_skip * 1000 / Vot_mean , 2) 
 
-    # print(f'平均电压为:{Vot_mean}')
-    # print(f'平均功率为:  {str(P_avg)} W')
-    # print(f'最大功率为: {max_power}W')
-    # print('消耗为：' + str(P_count) + 'mah')
+    E_count = round(P_avg * time_skip,2)
+    
 
-    #BAT_INFO 消耗毫安值、最大电压、最小电压、平均电压、最大功率、平均功率
-    bat_info = [P_count,Vot_max,Vot_min,Vot_mean,max_power,P_count]
+    bat_info = [P_count,Vot_max,Vot_min,Vot_mean,max_power,E_count,Cur_medin,P_avg]
     return bat_info
 
+
+def get_input_and_disable():
+    # 获取输入框的内容
+    global input_text
+    input_text = entry.get()
+    print("输入的内容是:", input_text)
+    # 禁用输入框
+    # entry.config(state='disabled')
+    root.destroy()
+
+
+
 if __name__ == '__main__':
+
+
+
+
+
+    input_text = ""
+    header = ['日志名称', 'Airmode标志','尾推前飞角度设定','尾推P值','尾推油门最大限定值','尾推油门最小限定值','巡航阶段尾推油门值', '巡航阶段多旋翼油门开度', '平均水平前飞速度','最大前飞速度','平均电流','平均功率','单位里程消耗（mah/km）','单位里程消耗（J/m）','任务模式飞行里程']
     
-    header = ['日志名称', '尾推前飞角度设定','尾推P值','尾推油门最大限定值','尾推油门最小限定值','巡航阶段尾推油门值', '巡航阶段多旋翼油门开度', '平均水平前飞速度','最大前飞速度','单位里程消耗（mah/km）']
-    with open('test.csv', 'a', encoding='gbk', newline='') as f:
+    root = tk.Tk()
+    root.geometry('500x200')
+
+
+
+    # 创建一个StringVar对象来存储输入框的内容
+    entry_text1 = tk.StringVar()
+    # 设置初始的提示词
+
+    entry_text1.set("在下方输入数据储存名字")
+
+
+    label = tk.Label(root, textvariable=entry_text1)
+    # 使用grid布局，将文本标签放在第0行
+    label.place(relx=0.5, rely=0.4, anchor='center')
+
+    entry_text = tk.StringVar()
+    entry_text.set("在此输入")
+
+    # 创建输入框，将StringVar对象设置为输入框的textvariable
+    entry = tk.Entry(root, textvariable=entry_text)
+    # entry = tk.Entry(root)
+    entry.place(relx=0.5, rely=0.5, anchor='center')
+
+    # 创建按钮，点击按钮后会调用get_input_and_disable函数
+    button = tk.Button(root, text="提交", command=get_input_and_disable)
+    button.place(relx=0.7, rely=0.5, anchor='center')
+    # 运行Tkinter事件循环
+    root.mainloop()
+
+    input_text = input_text + '.csv'
+
+    
+    with open(input_text, 'a', encoding='gbk', newline='') as f:
         writer = csv.writer(f)
-        # write the header
+    
         writer.writerow(header)
     line_str = []
     log_list = get_folder_address()
 
-    for log_addr in log_list:
+
+    root2 = tk.Tk()
+    root2.title("分析处理进度条")
+
+
+    style = ttk.Style()
+
+    # 设置进度条的样式
+    style.configure("TProgressbar",
+                    thickness=50,
+                    troughcolor ='#f5f5f5', 
+                    background='blue', 
+                    )
+
+    # 创建进度条
+    progress = ttk.Progressbar(root2, length=800, mode='determinate', style="TProgressbar")
+
+    progress.pack()
+    total_items = len(log_list)
+
+
+
+
+
+
+
+    for i, log_addr in enumerate(log_list):
+
         log,topic = get_log(log_addr,True)
 
+        progress['value'] = (i/total_items)*100
+        root2.update()
+
+
+        #获取mission标志
         index = add_mission(log)
+
         #平均前飞速度
         v_hor, time = get_velocity(log)
         v_hor, time_v = follw_index(index,v_hor,time)
-        v_hor_avg = np.median(v_hor)
+        v_hor_avg = round(np.median(v_hor),2)
 
 
         #最大前飞速度
         try:
-            v_hor_max = np.max(v_hor)
+            v_hor_max = round(np.max(v_hor),2)
         except:
             print('vor空数组')
             continue
@@ -300,15 +407,29 @@ if __name__ == '__main__':
 
         if v_hor_avg < 1:
             continue
-        #日志名称
 
+        
+        #日志名称
+        log_name_sp = '空载'
         log_name = log_addr.split('\\')[-1]
-        print(log_name)
+        log_name = log_name_sp + log_name
+
         #获取巡航阶段时间戳标记
         
-        curr,time = get_curr(log)
-        curr,time = follw_index(index,time,curr)
+        curr, time = get_curr(log)
+        curr, time_curr = follw_index(index,curr,time)
+      
+        vot, time = get_vot(log)
+        vot, time_vot = follw_index(index,vot,time)
+        # curr = np.array(curr)
+        vot = np.array(vot)
+        # print(curr)
 
+        uec_jm_list = 0
+        for i in range(len(curr)):
+            uec_jm_list = curr[i] * vot[i] / v_hor_avg + uec_jm_list
+
+        uec_jm = round(float(uec_jm_list/len(curr)),2)
         #A20参数 * 4
         A20 = get_A20(log_addr) #列表前4个
     
@@ -317,19 +438,23 @@ if __name__ == '__main__':
         thr, time = get_afterburad_CUAV(log)
         thr, time_thr = follw_index(index,thr,time)
         thr_avg = np.median(thr)
-
+        
+        #AIRMODE
+        air_mode_flag = get_AIR_MODE(log_addr)
 
        #飞行中多旋翼电机开度
         thr_hold,time = get_hold_thr(log)
         thr_hold,time_thr_hold = follw_index(index,thr_hold,time)
-        thr_hold_avg = np.median(thr_hold)
+        thr_hold_avg = round(np.median(thr_hold),2)
 
 
         ###单位里程消耗
         #消耗
         bat_info = count_power_onsumption_index(log,index)
         P_count = bat_info[0]
-        
+        P_avg = round(bat_info[-1],2)
+        Cur_avg = round(bat_info[-2],2)
+        E_count = round(bat_info[-3],2)
         #飞行时间:单位
         sum_time = 0
         us_to_s = 1000000
@@ -342,16 +467,23 @@ if __name__ == '__main__':
         #里程
         mileage_km = round(time_s * v_hor_avg/1000,2)
         
+        
 
         ####单位里程能耗
         uec = round(P_count / mileage_km,2) 
-
-        line_str=[log_name, A20[0], A20[1], A20[2], A20[3], thr_avg, thr_hold_avg, v_hor_avg, v_hor_max, uec, '\r']
-        with open('test.csv', 'a', encoding='gbk', newline='') as f:
-            writer = csv.writer(f)
-            # write the header
-            writer.writerow(line_str)
+        # uec_jm = round(E_count / v_hor_avg,2)
+        
+        line_str=[log_name, air_mode_flag, A20[0], A20[1], A20[2], A20[3], thr_avg, thr_hold_avg, v_hor_avg, v_hor_max, Cur_avg, P_avg, uec,uec_jm, mileage_km, '\r']
+        if mileage_km > 1:
+            with open(input_text, 'a', encoding='gbk', newline='') as f:
+                writer = csv.writer(f)
+                # write the header
+                writer.writerow(line_str)
+        else:
+            print('该日志里程不足')
     
-    messagebox.showinfo('分析完成', '点击退出')
+    messagebox.showinfo('分析完成', '点击退出') 
+
+    print('分析完成')
 
     sys.exit()

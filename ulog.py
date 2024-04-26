@@ -237,7 +237,7 @@ class ulog_data_ploter:
         fig = self.plot_everything(data_series,self.title,self.labels,self.legends,self.log)
         return fig
         # 显示图形
-        # plt.show()
+        plt.show()
     
     def plot_save(self):
         if not self.check_data():
@@ -246,7 +246,7 @@ class ulog_data_ploter:
         self.plot_everything(data_series,self.fig,self.title,self.labels,self.legends,self.log)
         # 保存图形
     
-        # plt.show()
+        plt.show()
 
 
     def plot_everything(self,data_series,titles,labels_in=None,legends_in=None,log=None):
@@ -370,7 +370,7 @@ def get_curr(log):
     vehicle_power = log.get_dataset('battery_status')
     timestamps = vehicle_power.data['timestamp']
     Cur = np.array(vehicle_power.data['current_a'])
-    Cur = savgol_filter(Cur, 50, 5, mode= 'nearest')
+    # Cur = savgol_filter(Cur, 50, 5, mode= 'nearest')
     print(vehicle_power)
     return Cur,timestamps 
 
@@ -618,7 +618,7 @@ if __name__ == "__main__":
 
     plotter = ulog_data_ploter(times_list, datas_list, labels, title, legends,log)
     plotter.plot()
-
+    plt.show()
 # #####绘制第二张图
 
     title2 = 'low_thr with roll pitch yaw'
@@ -630,9 +630,21 @@ if __name__ == "__main__":
 
     plotter = ulog_data_ploter(times_list2, datas_list2, labels2, title2, legends2,log)
     plotter.plot()
-
     plt.show()
+
   
 
+    title3 = 'test'
+    datas_list3 =[Cur,pitch,avg_thr,V_H]
+    times_list3 = [Cur_t,time_ATT,avg_thr_t,time_V_H]
+
+    labels3 = ['A','degree','%','m/s']
+    legends3 = ['Curr','Pitch','hold_Thr','speed_hor']   
+
+    plotter = ulog_data_ploter(times_list3, datas_list3, labels3, title3, legends3,log)
+    plotter.plot()
+    plt.show()
+
+  
 
     
